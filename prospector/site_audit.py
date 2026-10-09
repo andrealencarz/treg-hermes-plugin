@@ -27,6 +27,10 @@ KNOWN_HOSTS = {
     "many.link": ("links", "Manylink"),
     "bento.me": ("links", "Bento"),
     "myurls.co": ("links", "MyURLs"),
+    "shopmy.us": ("links", "ShopMy"),
+    "bio.link": ("links", "Bio Link"),
+    "allmylinks.com": ("links", "AllMyLinks"),
+    "linkin.bio": ("links", "Linkin.bio"),
     "ifood.com.br": ("delivery", "iFood"),
     "aiqfome.com": ("delivery", "aiqfome"),
     "anota.ai": ("delivery", "Anota AI"),
@@ -73,7 +77,7 @@ def _safe_target(url: str) -> tuple[str, int, str, str]:
     try:
         addresses = {item[4][0] for item in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)}
     except (OSError, UnicodeError) as exc:
-        raise ConnectionError("DNS indisponível") from exc
+        raise ConnectionError("DNS do site não respondeu") from exc
     if not addresses or any(not ipaddress.ip_address(ip).is_global for ip in addresses):
         raise UnsafeSite("Endereço não público")
     path = urlunsplit(("", "", parsed.path or "/", parsed.query, ""))
@@ -194,8 +198,12 @@ def analyze(url: str, fetcher=fetch_html) -> dict:
         return {"availability": "unsafe", "page_type": "unknown", "provider": None,
                 "seo_score": None, "issues": ["Endereço não público ou inválido"], "http_status": None, "final_url": None}
     except (OSError, ConnectionError, TimeoutError, ssl.SSLError) as exc:
+        issue = ("Tempo limite ao acessar o site" if isinstance(exc, TimeoutError)
+                 else "Falha na conexão TLS" if isinstance(exc, ssl.SSLError)
+                 else str(exc) if isinstance(exc, ConnectionError)
+                 else "Falha de conexão com o site")
         return {"availability": "offline", "page_type": input_kind, "provider": input_provider,
-                "seo_score": None, "issues": [type(exc).__name__], "http_status": None, "final_url": None}
+                "seo_score": None, "issues": [issue], "http_status": None, "final_url": None}
     kind, provider = _host_type(urlsplit(final_url).hostname or "")
     final_parts = urlsplit(final_url)
     public_final_url = urlunsplit((final_parts.scheme, final_parts.netloc, final_parts.path, "", ""))

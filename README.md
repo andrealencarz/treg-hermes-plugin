@@ -2,7 +2,7 @@
 
 Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e programação na própria interface web do Hermes. As fontes selecionáveis são Google Maps, Instagram e páginas de empresas do LinkedIn via Treg. Instalar ou ativar o plugin não inicia buscas pagas.
 
-**Estado:** versão `0.1.0.dev5`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
+**Estado:** versão `0.1.0.dev6`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
 
 ## Instalar pela interface do Hermes
 
@@ -29,7 +29,7 @@ Cada fonte selecionada faz uma chamada por cidade, sujeita aos tetos da rodada, 
 
 Em **Leads**, use **Analisar site** em um lead ou **Analisar sites da página** para verificar até 20 leads ainda sem análise, com até três verificações simultâneas. A análise consulta a página pública diretamente, sem Treg e sem custo de API. O resultado salvo mostra disponibilidade, tipo de página, plataforma reconhecida e data da verificação. **Detalhes da análise** lista os sinais encontrados; o CSV também inclui essas colunas. Se o site do lead mudar, a análise antiga deixa de ser exibida até nova verificação.
 
-O indicador de SEO (0 a 100) é uma triagem técnica da página inicial: título, meta description, H1, diretiva noindex, URL canônica, idioma e viewport. Ele não mede posição no Google. Em páginas de links, delivery, marketplace e redes sociais, o SEO do site próprio não é avaliado. HTTP 401/403/429 aparece como **Acesso bloqueado**, distinto de **Fora do ar**. A consulta tem limite de tempo e tamanho; endereços internos ou privados são recusados.
+O indicador de SEO (0 a 100) é uma triagem técnica da página inicial: título, meta description, H1, diretiva noindex, URL canônica, idioma e viewport. Ele não mede posição no Google. Em páginas de links, delivery, marketplace e redes sociais, o SEO do site próprio não é avaliado. HTTP 401/403/429 aparece como **Acesso bloqueado**, distinto de **Fora do ar / inacessível**. O detalhe indica falhas de DNS, tempo limite ou TLS; a consulta tem limite de tempo e tamanho, e endereços internos ou privados são recusados.
 
 ## Segurança e custos
 

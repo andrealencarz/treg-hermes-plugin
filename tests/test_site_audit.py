@@ -26,10 +26,13 @@ def test_site_analysis_classifies_provider_and_basic_seo():
     third_party = site_audit.analyze("https://linktr.ee/clinica", lambda _: (200, "https://www.ifood.com.br/loja/1", "text/html", HTML))
     assert third_party["page_type"] == "delivery" and third_party["provider"] == "iFood"
     assert third_party["seo_score"] is None
+    shopmy = site_audit.analyze("https://shopmy.us/shop/clinica", lambda _: (200, "https://shopmy.us/shop/clinica", "text/html", HTML))
+    assert shopmy["page_type"] == "links" and shopmy["provider"] == "ShopMy"
     blocked = site_audit.analyze("https://clinica.example", lambda _: (403, "https://clinica.example", "text/html", ""))
     assert blocked["availability"] == "blocked"
     offline = site_audit.analyze("https://clinica.example", lambda _: (_ for _ in ()).throw(TimeoutError()))
     assert offline["availability"] == "offline"
+    assert offline["issues"] == ["Tempo limite ao acessar o site"]
     links = "<html><body><h1>Links</h1>" + "".join(
         f'<a href="https://site{i}.example/">Link {i}</a>' for i in range(5)) + "</body></html>"
     possible = site_audit.analyze("https://negocio.example", lambda _: (200, "https://negocio.example/", "text/html", links))

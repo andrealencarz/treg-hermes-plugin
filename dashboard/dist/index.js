@@ -36,7 +36,7 @@
     delivery:"Delivery",marketplace:"Marketplace",social:"Rede social",messaging:"Mensagens",unknown:"Tipo desconhecido"};
   const auditLabel = audit => {
     if (!audit) return "Ainda não analisado";
-    const access = {online:"No ar",offline:"Fora do ar",blocked:"Acesso bloqueado",error:"Erro de acesso",unsafe:"Endereço não público"}[audit.availability] || "Não avaliado";
+    const access = {online:"No ar",offline:"Fora do ar / inacessível",blocked:"Acesso bloqueado",error:"Erro de acesso",unsafe:"Endereço não público"}[audit.availability] || "Não avaliado";
     const kind = siteTypeLabels[audit.page_type] || audit.page_type;
     const seo = audit.seo_score == null ? "" : ` · SEO ${audit.seo_score}/100${audit.seo_score < 60 ? " (atenção)" : ""}`;
     return `${access} · ${audit.provider || kind}${seo}`;

@@ -88,7 +88,7 @@ wheels = [
 
 [[package]]
 name = "hermes-prospector"
-version = "0.1.0.dev5"
+version = "0.1.0.dev6"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },

@@ -107,7 +107,7 @@ assert.ok(auditText.includes("No ar · iFood"));
 assert.ok(auditText.includes("Atualizar análise"));
 assert.ok(auditText.includes("Página em plataforma de terceiros"));
 assert.ok(flatten(render("dashboard",true,[],null,[{...lead,site_audit:{...auditLead.site_audit,
-  availability:"offline",page_type:"unknown",provider:null}}])).includes("Fora do ar"));
+  availability:"offline",page_type:"unknown",provider:null}}])).includes("Fora do ar / inacessível"));
 console.log("leads: resultado da análise do site exibido");
 
 const campaign = {id:"campaign-1",name:"Clínica Estética",niche:"estética",service:"Marketing",

@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.1.0.dev6 — 09/10/2026
+
+- A análise explica falhas de DNS, tempo limite e TLS em linguagem clara e distingue site inacessível de bloqueio HTTP.
+- Reconhecimento de ShopMy e outros serviços comuns de página de links.
+
 ## 0.1.0.dev5 — 09/10/2026
 
 - Análise sob demanda de sites de leads, individual ou até 20 por página, sem chamadas Treg.
