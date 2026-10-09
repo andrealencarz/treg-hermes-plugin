@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.1.0.dev7 — 09/10/2026
+
+- Filtro de leads por situação do site: sem site, site ruim, site bom ou não analisado.
+- O mesmo filtro limita a exportação CSV e ignora análises antigas quando a URL do lead muda.
+
 ## 0.1.0.dev6 — 09/10/2026
 
 - A análise explica falhas de DNS, tempo limite e TLS em linguagem clara e distingue site inacessível de bloqueio HTTP.

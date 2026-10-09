@@ -353,10 +353,12 @@ class ProspectorService:
 
     def leads(self, *, campaign_id: str | None = None, q: str = "", page: int = 1, size: int = 20,
               city: str | None = None, uf: str | None = None, niche: str | None = None,
-              source: str | None = None, status: str | None = None,
+              source: str | None = None, status: str | None = None, site_quality: str = "",
               sort: str = "recent") -> dict:
         if page < 1 or size not in (20, 50, 100):
             raise DomainError("Paginação inválida")
+        if site_quality not in {"", "no_site", "poor", "good", "unanalyzed"}:
+            raise DomainError("Filtro de site inválido")
         where = ["1=1"]
         params: list = []
         if campaign_id:
@@ -372,13 +374,24 @@ class ProspectorService:
         if source:
             where.append("EXISTS (SELECT 1 FROM lead_source ls WHERE ls.lead_id=l.id AND ls.source=?)")
             params.append(source)
+        if site_quality == "no_site":
+            where.append("(l.website IS NULL OR trim(l.website)='')")
+        elif site_quality == "poor":
+            where.append("""l.website IS NOT NULL AND trim(l.website)<>'' AND a.lead_id IS NOT NULL
+                AND (a.availability<>'online' OR a.page_type<>'website' OR a.seo_score<60)""")
+        elif site_quality == "good":
+            where.append("""a.availability='online' AND a.page_type='website' AND a.seo_score>=60""")
+        elif site_quality == "unanalyzed":
+            where.append("""l.website IS NOT NULL AND trim(l.website)<>'' AND
+                (a.lead_id IS NULL OR (a.availability='online' AND a.page_type='website' AND a.seo_score IS NULL))""")
         clause = " AND ".join(where)
-        total = self.conn.execute(f"SELECT COUNT(*) AS n FROM lead l WHERE {clause}", params).fetchone()["n"]
+        tables = "lead l LEFT JOIN lead_site_audit a ON a.lead_id=l.id AND a.website=l.website"
+        total = self.conn.execute(f"SELECT COUNT(*) AS n FROM {tables} WHERE {clause}", params).fetchone()["n"]
         ordering = {"recent": "l.last_seen_at DESC", "name": "l.name COLLATE NOCASE ASC",
                     "city": "l.city COLLATE NOCASE ASC"}.get(sort)
         if ordering is None:
             raise DomainError("Ordenação inválida")
-        rows = self.conn.execute(f"SELECT l.* FROM lead l WHERE {clause} ORDER BY {ordering} LIMIT ? OFFSET ?",
+        rows = self.conn.execute(f"SELECT l.* FROM {tables} WHERE {clause} ORDER BY {ordering} LIMIT ? OFFSET ?",
                                  (*params, size, (page - 1) * size)).fetchall()
         items = [dict(r) for r in rows]
         for lead in items:

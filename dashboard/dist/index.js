@@ -65,7 +65,7 @@
     const [runs, setRuns] = useState([]);
     const [schedules, setSchedules] = useState([]);
     const [leads, setLeads] = useState({items:[], total:0, page:1, size:20});
-    const [filter, setFilter] = useState({q:"", campaign_id:"", status:"", source:""});
+    const [filter, setFilter] = useState({q:"", campaign_id:"", status:"", source:"", site_quality:""});
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [ready, setReady] = useState(false);
@@ -75,7 +75,8 @@
     const load = useCallback(async function (query) {
       const f = query || filter;
       const params = new URLSearchParams({q:f.q || "", campaign_id:f.campaign_id || "",
-        status:f.status || "", source:f.source || "", page:String(f.page || 1), size:"20"});
+        status:f.status || "", source:f.source || "", site_quality:f.site_quality || "",
+        page:String(f.page || 1), size:"20"});
       const [state, cs, rs, ss, ls] = await Promise.all([
         request("/status"), request("/campaigns"), request("/runs"),
         request("/schedules"), request("/leads?" + params.toString())]);
@@ -165,7 +166,8 @@
 
     async function exportCSV() {
       try {
-        const params = new URLSearchParams({q:filter.q, campaign_id:filter.campaign_id, status:filter.status, source:filter.source});
+        const params = new URLSearchParams({q:filter.q, campaign_id:filter.campaign_id,
+          status:filter.status, source:filter.source, site_quality:filter.site_quality});
         const response = await SDK.authedFetch(API + "/leads/export.csv?" + params.toString());
         if (!response.ok) throw new Error("Exportação falhou (HTTP " + response.status + ")");
         const blob = await response.blob();
@@ -234,9 +236,17 @@
               h("option",{key:s,value:s},s || "Todos os status"))),
           h("select",{value:filter.source,onChange:e=>setFilter({...filter,source:e.target.value,page:1})},
             h("option",{value:""},"Todas as fontes"),...sourceOptions.map(([id,label])=>h("option",{key:id,value:id},label))),
+          h("select",{value:filter.site_quality,onChange:e=>setFilter({...filter,site_quality:e.target.value,page:1}),
+            "aria-label":"Situação do site"},
+            h("option",{value:""},"Todos os sites"),
+            h("option",{value:"no_site"},"Sem site"),
+            h("option",{value:"poor"},"Site ruim"),
+            h("option",{value:"good"},"Site bom"),
+            h("option",{value:"unanalyzed"},"Não analisado")),
           button("Filtrar",()=>load({...filter,page:1}).catch(e=>setError(String(e.message||e)))),
           button("Analisar sites da página",analyzePage,{disabled:busy || !leads.items.some(l=>l.website && !l.site_audit)}),
           button("CSV",exportCSV)),
+        h("small",{className:"hp-filter-help"},"Site ruim: inacessível, página de terceiros ou SEO abaixo de 60. Não analisado: sem avaliação conclusiva."),
         h("div", {className:"hp-table-wrap"}, h("table",null,
           h("thead",null,h("tr",null,...["Empresa","Cidade/UF","Contato","Status","Coletado"].map(x=>h("th",{key:x},x)))),
           h("tbody",null,...(leads.items.length ? leads.items.map(l=>h("tr",{key:l.id},

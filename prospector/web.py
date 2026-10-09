@@ -244,15 +244,15 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
     @app.get("/api/leads")
     def leads(campaign_id: str | None = None, q: str = "", page: int = 1, size: int = 20,
               city: str | None = None, uf: str | None = None, niche: str | None = None,
-              source: str | None = None, status: str | None = None, sort: str = "recent",
+              source: str | None = None, status: str | None = None, site_quality: str = "", sort: str = "recent",
               db: ProspectorService = Depends(service), _=Depends(current)):
         return db.leads(campaign_id=campaign_id, q=q, page=page, size=size, city=city, uf=uf,
-                        niche=niche, source=source, status=status, sort=sort)
+                        niche=niche, source=source, status=status, site_quality=site_quality, sort=sort)
 
     @app.get("/api/leads/export.csv")
     def export_csv(campaign_id: str | None = None, q: str = "", city: str | None = None,
                    uf: str | None = None, niche: str | None = None, source: str | None = None,
-                   status: str | None = None, sort: str = "recent",
+                   status: str | None = None, site_quality: str = "", sort: str = "recent",
                    db: ProspectorService = Depends(service), _=Depends(current)):
         output = io.StringIO()
         writer = csv.writer(output)
@@ -261,7 +261,8 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
         page_number = 1
         while True:
             batch = db.leads(campaign_id=campaign_id, q=q, page=page_number, size=100,
-                             city=city, uf=uf, niche=niche, source=source, status=status, sort=sort)
+                             city=city, uf=uf, niche=niche, source=source, status=status,
+                             site_quality=site_quality, sort=sort)
             for row in batch["items"]:
                 values = [row.get(key) or "" for key in ("name", "niche", "city", "uf", "website", "phone", "email")]
                 values += [", ".join(row["sources"]), row.get("status") or "", row.get("last_seen_at") or ""]

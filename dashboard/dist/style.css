@@ -24,6 +24,7 @@
 #hp-root .hp-card p{margin:7px 0 14px;opacity:.8}
 #hp-root .hp-actions,#hp-root .hp-toolbar,#hp-root .hp-pagination{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 #hp-root .hp-toolbar{margin:14px 0}
+#hp-root .hp-filter-help{margin:-6px 0 12px}
 #hp-root .hp-toolbar input{flex:2 1 230px}
 #hp-root .hp-toolbar select{flex:1 1 150px}
 #hp-root .hp-actions{margin-top:12px}

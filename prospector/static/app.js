@@ -93,7 +93,8 @@ function renderCampaigns() {
 
 function leadParams() {
   return new URLSearchParams({q:$("lead-search").value,campaign_id:$("lead-campaign").value,
-    status:$("lead-status").value,sort:$("lead-sort").value,page:leadPage,size:$("lead-size").value});
+    status:$("lead-status").value,site_quality:$("lead-site-quality").value,
+    sort:$("lead-sort").value,page:leadPage,size:$("lead-size").value});
 }
 
 async function loadLeads() {
@@ -155,7 +156,7 @@ $("schedule-frequency").onchange=scheduleFields;
 $("preview-schedule").onclick=async()=>{const payload=schedulePayload();if(!payload.campaign_id){$("schedule-error").textContent="Selecione uma campanha";return}try{const value=await api(`/api/schedules/${payload.campaign_id}/preview`,{method:"POST",body:JSON.stringify(payload)});$("schedule-preview").textContent=value.next_occurrences.length?"Próximas: "+value.next_occurrences.map(date).join(" · "):"Nenhuma ocorrência futura";$("schedule-error").textContent=""}catch(e){$("schedule-error").textContent=e.message}};
 $("schedule-form").addEventListener("submit",async event=>{event.preventDefault();const payload=schedulePayload();try{await api(`/api/schedules/${payload.campaign_id}`,{method:"PUT",body:JSON.stringify(payload)});$("schedule-error").textContent="";notice("Programação salva em pausa. Ative quando quiser iniciar a rotina.");await loadSchedules()}catch(e){$("schedule-error").textContent=e.message}});
 $("lead-prev").onclick=()=>{leadPage--;loadLeads()};$("lead-next").onclick=()=>{leadPage++;loadLeads()};
-for(const id of ["lead-search","lead-campaign","lead-status","lead-sort","lead-size"])$(id).addEventListener("input",()=>{leadPage=1;loadLeads()});
+for(const id of ["lead-search","lead-campaign","lead-status","lead-site-quality","lead-sort","lead-size"])$(id).addEventListener("input",()=>{leadPage=1;loadLeads()});
 $("lead-export").onclick=()=>{const params=leadParams();params.delete("page");params.delete("size");location.href=`/api/leads/export.csv?${params}`};
 $("lead-analyze").onclick=async()=>{
   const targets=currentLeads.filter(l=>l.website&&!l.site_audit).slice(0,20);
