@@ -18,6 +18,7 @@
     whatsappUrl: "https://wa.me/558699997003",
   };
   const money = n => "US$ " + ((Number(n) || 0) / 1000000).toFixed(4);
+  const sourceOptions = [["google_maps","Google Maps"],["instagram","Instagram"],["linkedin","LinkedIn"]];
   const when = s => s ? new Date(s).toLocaleString("pt-BR") : "—";
   const item = (tag, props, ...children) => h(tag, props, ...children);
   const button = (label, onClick, props) => h("button", Object.assign({type:"button", onClick}, props || {}), label);
@@ -41,7 +42,7 @@
     const [runs, setRuns] = useState([]);
     const [schedules, setSchedules] = useState([]);
     const [leads, setLeads] = useState({items:[], total:0, page:1, size:20});
-    const [filter, setFilter] = useState({q:"", campaign_id:"", status:""});
+    const [filter, setFilter] = useState({q:"", campaign_id:"", status:"", source:""});
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [ready, setReady] = useState(false);
@@ -50,7 +51,7 @@
     const load = useCallback(async function (query) {
       const f = query || filter;
       const params = new URLSearchParams({q:f.q || "", campaign_id:f.campaign_id || "",
-        status:f.status || "", page:String(f.page || 1), size:"20"});
+        status:f.status || "", source:f.source || "", page:String(f.page || 1), size:"20"});
       const [state, cs, rs, ss, ls] = await Promise.all([
         request("/status"), request("/campaigns"), request("/runs"),
         request("/schedules"), request("/leads?" + params.toString())]);
@@ -78,10 +79,16 @@
       });
       change(() => request("/campaigns", "POST", {
         name:data.get("name"), niche:data.get("niche"), service:data.get("service") || "",
-        cities, target_leads:Number(data.get("target")),
+        cities, sources:data.getAll("sources"), target_leads:Number(data.get("target")),
         run_cap_micro:Math.round(Number(data.get("cap"))*1000000),
         monthly_cap_micro:Math.round(Number(data.get("monthly"))*1000000),
       }), "Campanha criada em rascunho.").then(ok => {if (ok) form.reset();});
+    }
+
+    function sourceChecks(active) {
+      return h("div", {className:"hp-source-list"}, ...sourceOptions.map(([id,label]) =>
+        h("label", {key:id,className:"hp-source"},
+          h("input", {type:"checkbox",name:"sources",value:id,defaultChecked:active.includes(id)}),label)));
     }
 
     function saveToken(event) {
@@ -121,7 +128,7 @@
 
     async function exportCSV() {
       try {
-        const params = new URLSearchParams({q:filter.q, campaign_id:filter.campaign_id, status:filter.status});
+        const params = new URLSearchParams({q:filter.q, campaign_id:filter.campaign_id, status:filter.status, source:filter.source});
         const response = await SDK.authedFetch(API + "/leads/export.csv?" + params.toString());
         if (!response.ok) throw new Error("Exportação falhou (HTTP " + response.status + ")");
         const blob = await response.blob();
@@ -165,12 +172,15 @@
           h("select",{value:filter.status,onChange:e=>setFilter({...filter,status:e.target.value,page:1})},
             ...["","Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>
               h("option",{key:s,value:s},s || "Todos os status"))),
+          h("select",{value:filter.source,onChange:e=>setFilter({...filter,source:e.target.value,page:1})},
+            h("option",{value:""},"Todas as fontes"),...sourceOptions.map(([id,label])=>h("option",{key:id,value:id},label))),
           button("Filtrar",()=>load({...filter,page:1}).catch(e=>setError(String(e.message||e)))),
           button("CSV",exportCSV)),
         h("div", {className:"hp-table-wrap"}, h("table",null,
           h("thead",null,h("tr",null,...["Empresa","Cidade/UF","Contato","Status","Coletado"].map(x=>h("th",{key:x},x)))),
           h("tbody",null,...(leads.items.length ? leads.items.map(l=>h("tr",{key:l.id},
-            h("td",null,h("strong",null,l.name),h("small",null,l.niche || "")),
+            h("td",null,h("strong",null,l.name),h("small",null,l.niche || ""),
+              h("small",null,(l.sources || []).map(s=>sourceOptions.find(x=>x[0]===s)?.[1] || s).join(" · "))),
             h("td",null,(l.city || "—") + "/" + (l.uf || "—")),
             h("td",null,l.website ? h("a",{href:l.website,target:"_blank",rel:"noopener noreferrer"},"Site") : "—",
               h("small",null,l.phone || l.email || "")),
@@ -185,6 +195,11 @@
         h("div",null,h("h2",null,"Campanhas"),...(campaigns.length ? campaigns.map(c=>h("article",{className:"hp-card",key:c.id},
           h("h3",null,c.name),h("p",null,c.niche+" · "+c.cities.map(x=>x.city+"/"+x.uf).join(", ")),
           h("p",null,c.state+" · meta "+c.target_leads+" · rodada "+money(c.run_cap_micro)),
+          h("form",{className:"hp-sources-form",onSubmit:e=>{e.preventDefault();
+            const sources=new FormData(e.currentTarget).getAll("sources");
+            change(()=>request("/campaigns/"+c.id,"PATCH",{sources}),"Fontes atualizadas. A rodada já enfileirada mantém as fontes anteriores.");}},
+            h("strong",null,"Fontes da campanha"),sourceChecks(c.sources || ["google_maps"]),
+            h("button",{type:"submit",disabled:busy||c.state==="archived"},"Salvar fontes")),
           h("div",{className:"hp-actions"},
             button("Buscar agora",()=>{if(window.confirm("Executar busca paga até "+money(c.run_cap_micro)+"?"))
               change(()=>request("/campaigns/"+c.id+"/runs","POST"),"Busca enfileirada.");},{disabled:busy||!status.treg_configured||c.state==="archived"}),
@@ -195,6 +210,7 @@
         h("form",{className:"hp-card",onSubmit:createCampaign},h("h2",null,"Nova campanha"),
           field("Nome","name",{required:true}),field("Nicho para busca","niche",{required:true,placeholder:"dentista"}),
           field("Serviço oferecido","service"),field("Cidades (Cidade, UF por linha)","cities",{tag:"textarea",required:true,rows:4,placeholder:"Fortaleza, CE"}),
+          h("div",{className:"hp-sources-form"},h("strong",null,"Fontes para buscar"),sourceChecks(["google_maps"])),
           field("Meta de leads","target",{type:"number",min:1,max:1000,defaultValue:30}),
           field("Teto por rodada (USD)","cap",{type:"number",min:"0.01",step:"0.01",defaultValue:"1.00"}),
           field("Teto mensal (USD)","monthly",{type:"number",min:"0.01",step:"0.01",defaultValue:"30.00"}),
@@ -245,7 +261,7 @@
           h("h2",null,"Sobre o plugin"),
           h("p",null,"Campanhas, leads, custos e programação de buscas Treg no Hermes."),
           h("p",null,"Desenvolvedor: ",h("strong",null,ABOUT.developer)),
-          h("p",null,"Versão 0.1.0.dev0")),
+          h("p",null,"Versão 0.1.0.dev1")),
         h("article",{className:"hp-card"},
           h("h2",null,"Contato e suporte"),
           h("dl",{className:"hp-contact-list"},

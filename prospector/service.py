@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from . import treg
 from .db import connect, now, transaction
+from .sources import SOURCES, normalize, selected
 
 
 class DomainError(ValueError):
@@ -32,7 +33,8 @@ class ProspectorService:
 
     def create_campaign(self, *, name: str, niche: str, cities: list[dict], service: str = "",
                         target_leads: int = 30, run_cap_micro: int = 1_000_000,
-                        monthly_cap_micro: int = 30_000_000, timezone: str = "America/Fortaleza") -> dict:
+                        monthly_cap_micro: int = 30_000_000, timezone: str = "America/Fortaleza",
+                        sources: list[str] | None = None) -> dict:
         name, niche = name.strip(), niche.strip()
         if not name or not niche or len(name) > 120 or len(niche) > 120:
             raise DomainError("Informe nome e nicho com até 120 caracteres")
@@ -49,16 +51,21 @@ class ProspectorService:
         if not 1 <= target_leads <= 1000 or run_cap_micro <= 0 or monthly_cap_micro <= 0:
             raise DomainError("Meta ou orçamento inválido")
         try:
+            sources = selected(sources if sources is not None else ["google_maps"])
+        except ValueError as exc:
+            raise DomainError(str(exc)) from exc
+        try:
             ZoneInfo(timezone)
         except ZoneInfoNotFoundError as exc:
             raise DomainError("Fuso IANA inválido") from exc
         campaign_id = str(uuid.uuid4())
         timestamp = now()
         with transaction(self.conn):
-            self.conn.execute("""INSERT INTO campaign(id,name,service,niche,cities_json,target_leads,
+            self.conn.execute("""INSERT INTO campaign(id,name,service,niche,cities_json,source,sources_json,target_leads,
                 run_cap_micro,monthly_cap_micro,timezone,created_at,updated_at)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (campaign_id, name, service.strip(), niche, json.dumps(clean, ensure_ascii=False),
+                 sources[0], json.dumps(sources),
                  target_leads, run_cap_micro, monthly_cap_micro, timezone, timestamp, timestamp))
         return self.campaign(campaign_id)
 
@@ -66,6 +73,7 @@ class ProspectorService:
         row = _obj(self.conn.execute("SELECT * FROM campaign WHERE id=?", (campaign_id,)).fetchone())
         if row:
             row["cities"] = json.loads(row.pop("cities_json"))
+            row["sources"] = json.loads(row.pop("sources_json"))
         return row
 
     def campaigns(self) -> list[dict]:
@@ -73,13 +81,15 @@ class ProspectorService:
 
     def update_campaign(self, campaign_id: str, *, name: str | None = None, niche: str | None = None,
                         cities: list[dict] | None = None, target_leads: int | None = None,
-                        run_cap_micro: int | None = None, monthly_cap_micro: int | None = None) -> dict:
+                        run_cap_micro: int | None = None, monthly_cap_micro: int | None = None,
+                        sources: list[str] | None = None) -> dict:
         old = self.campaign(campaign_id)
         if not old or old["state"] == "archived":
             raise DomainError("Campanha inexistente ou arquivada")
         values = {"name": name if name is not None else old["name"],
                   "niche": niche if niche is not None else old["niche"],
                   "cities": cities if cities is not None else old["cities"],
+                  "sources": sources if sources is not None else old["sources"],
                   "target_leads": target_leads if target_leads is not None else old["target_leads"],
                   "run_cap_micro": run_cap_micro if run_cap_micro is not None else old["run_cap_micro"],
                   "monthly_cap_micro": monthly_cap_micro if monthly_cap_micro is not None else old["monthly_cap_micro"]}
@@ -90,10 +100,15 @@ class ProspectorService:
             raise DomainError("Cidades inválidas")
         if not 1 <= values["target_leads"] <= 1000 or values["run_cap_micro"] <= 0 or values["monthly_cap_micro"] <= 0:
             raise DomainError("Meta ou orçamento inválido")
+        try:
+            values["sources"] = selected(values["sources"])
+        except ValueError as exc:
+            raise DomainError(str(exc)) from exc
         with transaction(self.conn):
-            self.conn.execute("""UPDATE campaign SET name=?,niche=?,cities_json=?,target_leads=?,
+            self.conn.execute("""UPDATE campaign SET name=?,niche=?,cities_json=?,source=?,sources_json=?,target_leads=?,
                 run_cap_micro=?,monthly_cap_micro=?,version=version+1,updated_at=? WHERE id=?""",
                 (values["name"].strip(), values["niche"].strip(), json.dumps(values["cities"], ensure_ascii=False),
+                 values["sources"][0], json.dumps(values["sources"]),
                  values["target_leads"], values["run_cap_micro"], values["monthly_cap_micro"], now(), campaign_id))
         return self.campaign(campaign_id)
 
@@ -104,7 +119,7 @@ class ProspectorService:
         return self.create_campaign(name=f"{original['name']} (cópia)", niche=original["niche"],
             cities=original["cities"], service=original["service"], target_leads=original["target_leads"],
             run_cap_micro=original["run_cap_micro"], monthly_cap_micro=original["monthly_cap_micro"],
-            timezone=original["timezone"])
+            timezone=original["timezone"], sources=original["sources"])
 
     def set_campaign_state(self, campaign_id: str, state: str) -> dict:
         if state not in {"draft", "active", "paused", "archived"}:
@@ -165,7 +180,10 @@ class ProspectorService:
             WHERE b.{column}=?{extra}""", params).fetchone()
         return row["used"]
 
-    def reserve(self, execution_id: str, *, city: str, amount_micro: int = 10_000) -> dict:
+    def reserve(self, execution_id: str, *, city: str, amount_micro: int = 10_000,
+                source: str = "google_maps") -> dict:
+        if source not in SOURCES:
+            raise DomainError("Fonte inválida")
         run = self.run(execution_id)
         if not run or run["state"] != "running":
             raise DomainError("Rodada não está em execução")
@@ -187,24 +205,26 @@ class ProspectorService:
             key = str(uuid.uuid4())
             timestamp = now()
             self.conn.execute("""INSERT INTO tool_call(id,execution_id,endpoint,idempotency_key,city,reserved_micro,created_at)
-                VALUES(?,?,?,?,?,?,?)""", (call_id, execution_id, treg.ENDPOINT, key, city, amount_micro, timestamp))
+                VALUES(?,?,?,?,?,?,?)""", (call_id, execution_id, SOURCES[source].endpoint, key, city, amount_micro, timestamp))
             self.conn.execute("""INSERT INTO budget_reservation(tool_call_id,campaign_id,campaign_period,global_period,amount_micro,state,created_at)
                 VALUES(?,?,?,?,?,'held',?)""", (call_id, campaign["id"], cp, gp, amount_micro, timestamp))
         return {"id": call_id, "idempotency_key": key, "reserved_micro": amount_micro}
 
-    def region_due(self, campaign_id: str, *, city: str, uf: str, query: str) -> bool:
-        row = self.conn.execute("""SELECT expires_at FROM search_cursor WHERE campaign_id=? AND source='google_maps'
-            AND city=? AND uf=? AND query=?""", (campaign_id, city, uf, query)).fetchone()
+    def region_due(self, campaign_id: str, *, city: str, uf: str, query: str,
+                   source: str = "google_maps") -> bool:
+        row = self.conn.execute("""SELECT expires_at FROM search_cursor WHERE campaign_id=? AND source=?
+            AND city=? AND uf=? AND query=?""", (campaign_id, source, city, uf, query)).fetchone()
         return not row or row["expires_at"] <= now()
 
-    def mark_region(self, campaign_id: str, *, city: str, uf: str, query: str, ttl_days: int = 7):
+    def mark_region(self, campaign_id: str, *, city: str, uf: str, query: str, ttl_days: int = 7,
+                    source: str = "google_maps"):
         timestamp = now()
         expires = (datetime.now(timezone.utc) + timedelta(days=ttl_days)).isoformat()
         with transaction(self.conn):
             self.conn.execute("""INSERT INTO search_cursor(campaign_id,source,city,uf,query,last_collected_at,expires_at)
-                VALUES(?,'google_maps',?,?,?,?,?) ON CONFLICT(campaign_id,source,city,uf,query)
+                VALUES(?,?,?,?,?,?,?) ON CONFLICT(campaign_id,source,city,uf,query)
                 DO UPDATE SET last_collected_at=excluded.last_collected_at,expires_at=excluded.expires_at""",
-                (campaign_id, city, uf, query, timestamp, expires))
+                (campaign_id, source, city, uf, query, timestamp, expires))
 
     def settle(self, call_id: str, *, cost_micro: int | None, treg_call_id: str | None,
                error: str | None = None) -> None:
@@ -261,9 +281,13 @@ class ProspectorService:
         return outcomes
 
     def add_place(self, execution_id: str, item: dict, *, city: str, uf: str, niche: str) -> str | None:
-        lead = treg.normalize_place(item, city=city, uf=uf, niche=niche)
+        lead = normalize("google_maps", item, city=city, uf=uf, niche=niche)
+        return self.add_lead(execution_id, lead)
+
+    def add_lead(self, execution_id: str, lead: dict | None) -> str | None:
         if lead is None:
             return None
+        city, uf, niche = lead["city"], lead["uf"], lead["niche"]
         timestamp = now()
         with transaction(self.conn):
             existing = self.conn.execute("SELECT lead_id FROM lead_source WHERE source=? AND external_id=?",
@@ -273,6 +297,11 @@ class ProspectorService:
                 match = self.conn.execute("""SELECT id FROM lead WHERE phone=? AND city=? AND uf=?
                     AND lower(name)=lower(?) LIMIT 1""",
                     (lead["phone"], city, uf, lead["name"])).fetchone()
+                lead_id = match["id"] if match else None
+            if not lead_id and lead["domain"]:
+                match = self.conn.execute("""SELECT id FROM lead WHERE domain=? AND city=? AND uf=?
+                    AND lower(name)=lower(?) LIMIT 1""",
+                    (lead["domain"], city, uf, lead["name"])).fetchone()
                 lead_id = match["id"] if match else None
             if not lead_id:
                 lead_id = str(uuid.uuid4())
@@ -344,7 +373,11 @@ class ProspectorService:
             raise DomainError("Ordenação inválida")
         rows = self.conn.execute(f"SELECT l.* FROM lead l WHERE {clause} ORDER BY {ordering} LIMIT ? OFFSET ?",
                                  (*params, size, (page - 1) * size)).fetchall()
-        return {"total": total, "page": page, "size": size, "items": [dict(r) for r in rows]}
+        items = [dict(r) for r in rows]
+        for lead in items:
+            lead["sources"] = [r["source"] for r in self.conn.execute(
+                "SELECT source FROM lead_source WHERE lead_id=? ORDER BY source", (lead["id"],))]
+        return {"total": total, "page": page, "size": size, "items": items}
 
     def lead(self, lead_id: str) -> dict | None:
         row = self.conn.execute("SELECT * FROM lead WHERE id=?", (lead_id,)).fetchone()

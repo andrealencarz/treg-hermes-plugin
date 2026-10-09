@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const source = fs.readFileSync(path.join(__dirname, "../dashboard/dist/index.js"), "utf8");
 const expected = {
   dashboard: ["Nenhum lead encontrado."],
-  campaigns: ["Nova campanha", "Criar em rascunho"],
+  campaigns: ["Nova campanha", "Criar em rascunho", "Google Maps", "Instagram", "LinkedIn"],
   schedule: ["Programar campanha", "Salvar em pausa"],
   runs: ["Nenhuma execução.", "Reconciliar custos"],
   settings: ["Chave Treg", "Validar e salvar", "Orçamento global", "Salvar teto"],

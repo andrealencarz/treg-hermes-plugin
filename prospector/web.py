@@ -25,6 +25,7 @@ class CampaignIn(BaseModel):
     niche: str
     service: str = ""
     cities: list[dict]
+    sources: list[str] = ["google_maps"]
     target_leads: int = Field(30, ge=1, le=1000)
     run_cap_micro: int = Field(1_000_000, gt=0)
     monthly_cap_micro: int = Field(30_000_000, gt=0)
@@ -35,6 +36,7 @@ class CampaignUpdate(BaseModel):
     name: str | None = None
     niche: str | None = None
     cities: list[dict] | None = None
+    sources: list[str] | None = None
     target_leads: int | None = None
     run_cap_micro: int | None = None
     monthly_cap_micro: int | None = None
@@ -253,13 +255,14 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
                    db: ProspectorService = Depends(service), _=Depends(current)):
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["Nome", "Nicho", "Cidade", "UF", "Site", "Telefone", "E-mail", "Status", "Coletado"])
+        writer.writerow(["Nome", "Nicho", "Cidade", "UF", "Site", "Telefone", "E-mail", "Fontes", "Status", "Coletado"])
         page_number = 1
         while True:
             batch = db.leads(campaign_id=campaign_id, q=q, page=page_number, size=100,
                              city=city, uf=uf, niche=niche, source=source, status=status, sort=sort)
             for row in batch["items"]:
-                values = [row.get(key) or "" for key in ("name", "niche", "city", "uf", "website", "phone", "email", "status", "last_seen_at")]
+                values = [row.get(key) or "" for key in ("name", "niche", "city", "uf", "website", "phone", "email")]
+                values += [", ".join(row["sources"]), row.get("status") or "", row.get("last_seen_at") or ""]
                 writer.writerow(["'" + str(v) if str(v).startswith(("=", "+", "-", "@", "\t", "\r")) else v for v in values])
             if page_number * 100 >= batch["total"]:
                 break

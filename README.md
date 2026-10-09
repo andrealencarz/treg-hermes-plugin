@@ -1,8 +1,8 @@
 # Hermes Prospector + Treg
 
-Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e programação na própria interface web do Hermes. A fonte inicial de descoberta é Google Maps via Treg. Instalar ou ativar o plugin não inicia buscas pagas.
+Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e programação na própria interface web do Hermes. As fontes selecionáveis são Google Maps, Instagram e páginas de empresas do LinkedIn via Treg. Instalar ou ativar o plugin não inicia buscas pagas.
 
-**Estado:** versão `0.1.0.dev0`. A integração foi testada localmente contra o contrato do Hermes 0.21.5, mas ainda precisa de validação na instalação real do usuário.
+**Estado:** versão `0.1.0.dev1`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
 
 ## Instalar pela interface do Hermes
 
@@ -17,11 +17,13 @@ O GitHub é apenas a origem do código. O plugin cria seus dados, banco e segred
 ## Primeira campanha
 
 1. Em **Configurações**, ajuste o teto mensal global. Para uma primeira validação pequena, use um teto de até US$ 0,20, observando qualquer gasto já realizado no mesmo mês.
-2. Em **Campanhas**, crie um rascunho com nicho e cidade/UF. Use um termo curto, como `dentista`, e um teto por rodada adequado. O teste local com esse termo em Fortaleza retornou um lugar; o resultado depende da região e do catálogo Treg.
+2. Em **Campanhas**, crie um rascunho com nicho e cidade/UF, marque uma ou mais fontes e escolha um teto por rodada adequado. Use um termo curto, como `dentista`. O teste local com esse termo em Fortaleza retornou um lugar no Google Maps; os resultados variam por fonte, região e disponibilidade no Treg. Para incluir ou desmarcar uma fonte depois, use **Salvar fontes** no cartão da campanha. Rodadas já enfileiradas preservam a seleção anterior.
 3. Clique **Buscar agora**. A página **Execuções** mostra estado e custo; **Leads** permite filtrar, atualizar status e exportar CSV.
 4. Em **Programação**, salve horários e fuso. A agenda fica pausada até clicar **Ativar**. O cron do Hermes executa um script sem LLM que enfileira e processa a rodada.
 
 O teto global padrão do produto é US$ 30/mês e o teto padrão por rodada é US$ 1. Ajuste esses valores antes de qualquer busca. A autorização de US$ 0,20 dada para os testes locais não autoriza novas chamadas pagas na instalação.
+
+Cada fonte selecionada faz uma chamada por cidade, sujeita aos tetos da rodada, da campanha e do espaço de trabalho. Google Maps procura estabelecimentos; Instagram procura perfis públicos por termo e cidade no texto da busca; LinkedIn procura páginas de empresas por termo e localização. A localização de um perfil do Instagram não é verificada pela fonte. O painel mostra a origem de cada lead e o CSV inclui a coluna **Fontes**. As integrações sociais foram validadas com contratos públicos e respostas simuladas; a primeira execução real deve ser feita com teto pequeno e conferida em **Execuções**.
 
 ## Segurança e custos
 

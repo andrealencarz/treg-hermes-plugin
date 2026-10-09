@@ -1,5 +1,13 @@
 # Histórico
 
+## 0.1.0.dev1 — 09/10/2026
+
+- Campanhas podem selecionar Google Maps, Instagram e LinkedIn, inclusive adicionar ou desmarcar fontes após a criação.
+- Adaptadores normalizam os resultados das três fontes; leads registram a origem no painel e no CSV.
+- Migração de campanhas existentes preserva Google Maps; rodadas já enfileiradas mantêm a seleção anterior.
+- Catálogo e preço de cada ferramenta são conferidos antes da rodada; limites e reconciliação seguem por chamada.
+- Testes locais de contrato, migração e execução com múltiplas fontes, sem chamadas pagas.
+
 ## 0.1.0.dev0 — 09/10/2026
 
 - Aba Prospector e API incorporadas ao Dashboard Hermes 0.21.5; instalação por URL na tela Plugins.

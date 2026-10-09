@@ -34,6 +34,7 @@ CREATE INDEX IF NOT EXISTS login_attempt_ip_idx ON login_attempt(remote_ip,attem
 CREATE TABLE IF NOT EXISTS campaign (
  id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', service TEXT NOT NULL DEFAULT '',
  niche TEXT NOT NULL, cities_json TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'google_maps',
+ sources_json TEXT NOT NULL DEFAULT '["google_maps"]',
  target_leads INTEGER NOT NULL DEFAULT 30 CHECK(target_leads BETWEEN 1 AND 1000),
  run_cap_micro INTEGER NOT NULL DEFAULT 1000000 CHECK(run_cap_micro>0),
  monthly_cap_micro INTEGER NOT NULL DEFAULT 30000000 CHECK(monthly_cap_micro>0),
@@ -138,6 +139,12 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(3,?)", (now(),))
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(4,?)", (now(),))
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(5,?)", (now(),))
+    if version < 6:
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(campaign)")}
+        if "sources_json" not in columns:
+            conn.execute("ALTER TABLE campaign ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[\"google_maps\"]'")
+            conn.execute("UPDATE campaign SET sources_json=json_array(source)")
+        conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(6,?)", (now(),))
     try:
         path.chmod(0o600)
     except OSError:

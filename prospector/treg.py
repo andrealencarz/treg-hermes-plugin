@@ -6,6 +6,8 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
+from .sources import SOURCES, normalize
+
 ENDPOINT = "anyapi.google.serp.maps"
 BASE_URL = "https://treg.to"
 
@@ -66,6 +68,82 @@ def catalog_capability() -> dict:
     return {"source": "google_maps", "endpoint": ENDPOINT, "discovery": usable,
             "platform_eligible": endpoint.get("platform_eligible"), "cost": endpoint.get("cost"),
             "blocked": endpoint.get("platform_blocked")}
+
+
+def source_capability(source: str) -> dict:
+    spec = SOURCES[source]
+    if source == "google_maps":
+        return catalog_capability()
+    request = urllib.request.Request(BASE_URL + "/catalog/endpoints/" + spec.endpoint)
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            endpoint = json.load(response).get("endpoint", {})
+    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        raise TregError("Catálogo Treg indisponível") from exc
+    params = endpoint.get("input", {}).get("queryParams", {})
+    required = "query" if source == "instagram" else "search"
+    return {"source": source, "endpoint": spec.endpoint,
+            "discovery": endpoint.get("method") == spec.method and required in params,
+            "platform_eligible": endpoint.get("platform_eligible"),
+            "blocked": endpoint.get("platform_blocked"), "cost": endpoint.get("cost")}
+
+
+def _source_items(body: dict, source: str, *, call_id: str | None, cost_micro: int | None) -> list[dict]:
+    spec = SOURCES[source]
+    candidates = [body]
+    for key in ("output", "data", "body"):
+        for node in tuple(candidates):
+            if isinstance(node, dict) and isinstance(node.get(key), dict):
+                candidates.append(node[key])
+    for node in candidates:
+        if not isinstance(node, dict):
+            continue
+        if node.get("success") is False or node.get("error") or str(node.get("status") or "").lower() in ("error", "failed"):
+            raise TregError(f"Busca {source} falhou no provedor", call_id=call_id, cost_micro=cost_micro)
+        if spec.result_key in node:
+            items = node[spec.result_key]
+            if isinstance(items, list) and all(isinstance(x, dict) for x in items):
+                return items
+            raise TregError(f"Resultados {source} em formato inesperado", call_id=call_id, cost_micro=cost_micro)
+    raise TregError(f"Resultados {source} ausentes na resposta", call_id=call_id, cost_micro=cost_micro)
+
+
+def search_source(*, source: str, token: str, org: str | None, query: str, city: str, uf: str,
+                  limit: int, idempotency_key: str, max_cost_micro: int,
+                  local_call_id: str | None = None) -> TregResult:
+    if source == "google_maps":
+        return search_maps(token=token, org=org, query=query, city=city, uf=uf, limit=limit,
+                           idempotency_key=idempotency_key, max_cost_micro=max_cost_micro,
+                           local_call_id=local_call_id)
+    if source not in SOURCES or max_cost_micro <= 0:
+        raise ValueError("Fonte ou teto por chamada inválido")
+    spec = SOURCES[source]
+    params = {"query": f"{query} {city} {uf}"} if source == "instagram" else {
+        "search": query, "location": f"{city}, {uf}, Brasil", "page": 1}
+    url = BASE_URL + "/call/" + spec.endpoint + "?" + urllib.parse.urlencode(params)
+    headers = {"X-Treg-Token": token, "Idempotency-Key": idempotency_key,
+               "X-Treg-Route-Max-Cost": f"{max_cost_micro / 1_000_000:.6f}"}
+    if org:
+        headers["X-Treg-Org"] = org
+    if local_call_id:
+        headers["X-Treg-Meta"] = f"prospector_call={local_call_id}"
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers, method=spec.method), timeout=100) as response:
+            call_id, cost_micro = response.headers.get("X-Treg-Call-Id"), _cost(response.headers)
+            try:
+                body = json.load(response)
+            except (ValueError, UnicodeDecodeError) as exc:
+                raise TregError("Resposta JSON do Treg inválida", call_id=call_id, cost_micro=cost_micro) from exc
+    except urllib.error.HTTPError as exc:
+        raise TregError(f"Treg retornou HTTP {exc.code}", call_id=exc.headers.get("X-Treg-Call-Id"),
+                        cost_micro=_cost(exc.headers)) from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise TregError("Resposta do Treg não recebida; a cobrança precisa de reconciliação") from exc
+    if not isinstance(body, dict):
+        raise TregError("Resposta do Treg em formato inesperado", call_id=call_id, cost_micro=cost_micro)
+    items = _source_items(body, source, call_id=call_id, cost_micro=cost_micro)
+    return TregResult(items=items[:limit], call_id=call_id, cost_micro=cost_micro,
+                      diagnostic={"items_returned": len(items), "source": source})
 
 
 def search_maps(*, token: str, org: str | None, query: str, city: str, uf: str,
@@ -159,19 +237,4 @@ def find_call(*, token: str, org: str | None, local_call_id: str) -> str | None:
 
 
 def normalize_place(item: dict, *, city: str, uf: str, niche: str) -> dict | None:
-    if not isinstance(item, dict) or not str(item.get("name") or "").strip():
-        return None
-    place_id = str(item.get("placeId") or "").strip()
-    if not place_id:
-        return None
-    website = str(item.get("website") or "").strip()
-    parsed = urllib.parse.urlsplit(website)
-    if parsed.scheme not in ("http", "https"):
-        website = ""
-        parsed = urllib.parse.urlsplit(website)
-    domain = parsed.hostname or ""
-    phone = "".join(c for c in str(item.get("phone") or "") if c.isdigit() or c == "+")
-    return {"name": str(item["name"]).strip(), "niche": niche, "city": city, "uf": uf,
-            "website": website or None, "domain": domain.lower() or None, "phone": phone or None,
-            "email": None, "source": "google_maps", "external_id": place_id,
-            "evidence_url": item.get("url")}
+    return normalize("google_maps", item, city=city, uf=uf, niche=niche)
