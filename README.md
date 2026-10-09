@@ -4,7 +4,7 @@ Plugin Python nativo do Hermes com painel web na mesma VPS para campanhas de des
 
 ## Estado desta versão
 
-Este repositório contém uma implementação local em desenvolvimento (`0.1.0.dev0`). Ela foi testada offline, mas **ainda não foi validada em uma VPS Hermes real nem com uma chave Treg**. Não publique como release de produção sem executar `VERIFICATION.md` na sua VPS.
+Este repositório contém uma implementação local em desenvolvimento (`0.1.0.dev0`). Os testes offline passaram e uma rodada local com chave Treg temporária salvou 1 lead e confirmou o custo no ledger. **A instalação ainda não foi validada em uma VPS Hermes real.** Não publique como release de produção sem executar `VERIFICATION.md` na sua VPS.
 
 A primeira fonte é Google Maps via `anyapi.google.serp.maps`. O catálogo público confirma os parâmetros `query`, `location` e `limit` (1–20) e informa preço de referência por chamada; o custo efetivo vem do header de cobrança do Treg. LinkedIn e Instagram não aparecem como fontes de descoberta nesta versão.
 
@@ -57,10 +57,28 @@ Em caso de resposta perdida do Treg, a reserva permanece pendente. Esta versão 
 
 ```bash
 uv sync --extra test
-uv run pytest -q
+bash scripts/test_local.sh
 uv build
 ```
 
 Para inspecionar o painel localmente, configure uma senha com `uv run prospector admin set-password` e inicie `PROSPECTOR_COOKIE_SECURE=0 uv run prospector serve`. Use dados de teste em `PROSPECTOR_DATA_DIR` para não tocar o perfil Hermes real.
+
+### Testes com uma chave Treg temporária
+
+Crie `.env` na raiz a partir de `.env.example`, com `TREG_TOKEN` e, para token de identidade, `TREG_ORG`. Restrinja o arquivo com `chmod 600 .env`. O Git ignora `.env`; nunca adicione a chave à linha de comando, ao commit ou ao relatório de teste.
+
+```bash
+.venv/bin/python -m scripts.treg_smoke
+```
+
+Esse comando valida identidade e catálogo sem fazer busca paga. Para executar **uma única** busca real com limite de US$ 0,01, depois de autorizar o gasto, use um diretório de auditoria novo fora do repositório:
+
+```bash
+.venv/bin/python -m scripts.treg_smoke --paid --niche dentista --max-usd 0.01 --state-dir /tmp/prospector-teste-UNICO
+```
+
+O script cria banco e auditoria privados nesse diretório e impede reutilizá-lo. Se uma chamada ficar pendente, consulte o ledger e reconcilie antes de qualquer novo teste. O resumo impresso não contém a chave nem contatos. Revogue a chave temporária após a validação.
+
+Para diagnosticar o endpoint sem criar uma campanha, `--catalog-example` usa por padrão o exemplo `coffee` em `Austin, TX`. `--probe-query` e `--probe-location` permitem alterar a consulta de diagnóstico; cada invocação com `--paid` faz no máximo uma chamada e exige um diretório novo. No teste local, “dentista” retornou um lugar em Fortaleza, enquanto “clínica odontológica” retornou zero. Use termos curtos e confira os resultados e custos antes de programar campanhas maiores.
 
 Consulte [COMPATIBILITY.md](COMPATIBILITY.md) para contratos verificados e [VERIFICATION.md](VERIFICATION.md) para o aceite na VPS. A licença deve ser definida pelo proprietário antes de qualquer publicação externa.

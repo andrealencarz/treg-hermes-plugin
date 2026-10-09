@@ -15,6 +15,7 @@ class TregResult:
     items: list[dict]
     call_id: str | None
     cost_micro: int | None
+    diagnostic: dict | None = None
 
 
 class TregError(Exception):
@@ -69,13 +70,16 @@ def catalog_capability() -> dict:
 
 def search_maps(*, token: str, org: str | None, query: str, city: str, uf: str,
                 limit: int, idempotency_key: str, max_cost_micro: int,
-                local_call_id: str | None = None) -> TregResult:
+                local_call_id: str | None = None, location_override: str | None = None,
+                language: str | None = "pt") -> TregResult:
     if not 1 <= limit <= 20:
         raise ValueError("O adaptador Google Maps aceita 1 a 20 resultados")
     if max_cost_micro <= 0:
         raise ValueError("Teto por chamada precisa ser positivo")
-    payload = json.dumps({"query": query, "location": f"{city}, {uf}, Brasil", "limit": limit,
-                          "language": "pt"}).encode("utf-8")
+    body = {"query": query, "location": location_override or f"{city}, {uf}, Brasil", "limit": limit}
+    if language:
+        body["language"] = language
+    payload = json.dumps(body).encode("utf-8")
     headers = {"Content-Type": "application/json", "X-Treg-Token": token,
                "Idempotency-Key": idempotency_key,
                "X-Treg-Route-Max-Cost": f"{max_cost_micro / 1_000_000:.6f}"}
@@ -86,18 +90,35 @@ def search_maps(*, token: str, org: str | None, query: str, city: str, uf: str,
     request = urllib.request.Request(BASE_URL + "/call/" + ENDPOINT, payload, headers, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=100) as response:
-            body = json.load(response)
             call_id = response.headers.get("X-Treg-Call-Id")
             cost_micro = _cost(response.headers)
+            try:
+                body = json.load(response)
+            except (ValueError, UnicodeDecodeError) as exc:
+                raise TregError("Resposta JSON do Treg inválida", call_id=call_id,
+                                cost_micro=cost_micro) from exc
     except urllib.error.HTTPError as exc:
         raise TregError(f"Treg retornou HTTP {exc.code}", call_id=exc.headers.get("X-Treg-Call-Id"),
                         cost_micro=_cost(exc.headers)) from exc
     except (urllib.error.URLError, TimeoutError) as exc:
         raise TregError("Resposta do Treg não recebida; a cobrança precisa de reconciliação") from exc
-    items = body.get("output", {}).get("data", {}).get("items", []) if isinstance(body, dict) else []
+    if not isinstance(body, dict):
+        raise TregError("Resposta do Treg em formato inesperado", call_id=call_id, cost_micro=cost_micro)
+    output = body.get("output")
+    data = output.get("data") if isinstance(output, dict) else None
+    items = data.get("items", []) if isinstance(data, dict) else []
+    if items is None:
+        items = []
     if not isinstance(items, list):
         raise TregError("Resposta do Treg em formato inesperado", call_id=call_id, cost_micro=cost_micro)
-    return TregResult(items=items, call_id=call_id, cost_micro=cost_micro)
+    diagnostic = {"root_keys": sorted(body.keys()),
+                  "output_type": type(output).__name__, "data_type": type(data).__name__,
+                  "data_keys": sorted(data.keys()) if isinstance(data, dict) else [],
+                  "found": output.get("found") if isinstance(output, dict) and
+                           isinstance(output.get("found"), int) else None,
+                  "items_returned": len(items),
+                  "items_with_place_id": sum(isinstance(item, dict) and bool(item.get("placeId")) for item in items)}
+    return TregResult(items=items, call_id=call_id, cost_micro=cost_micro, diagnostic=diagnostic)
 
 
 def _read_json(path: str, *, token: str, org: str | None):

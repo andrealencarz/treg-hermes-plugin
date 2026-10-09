@@ -42,7 +42,8 @@ def process_one(service: ProspectorService, *, token: str | None = None,
             if not service.region_due(campaign["id"], city=city, uf=uf, query=campaign["niche"]):
                 continue
             remaining = campaign["target_leads"] - service.run(execution_id)["new_campaign"]
-            call = service.reserve(execution_id, city=city)
+            call = service.reserve(execution_id, city=city,
+                                   amount_micro=min(10_000, campaign["run_cap_micro"]))
             calls += 1
             try:
                 result = search(token=token, org=org, query=campaign["niche"], city=city, uf=uf,
