@@ -12,17 +12,17 @@ A primeira fonte é Google Maps via `anyapi.google.serp.maps`. O catálogo públ
 
 - VPS Linux com systemd, Hermes **0.21.5 ou superior** e Python 3.11+.
 - Usuário não root que é dono do perfil Hermes, com `sudo` para serviço/proxy.
-- URL HTTPS do repositório Git publicado por você. Esta documentação não presume uma URL.
+- URL HTTPS deste repositório: `https://github.com/andrealencarz/treg-hermes-plugin`.
 - Para domínio: DNS apontando para a VPS e Caddy (o instalador tenta instalar via `apt-get` quando não há Nginx).
 - Para IP provisório: IP público, `ufw` ativo com política de entrada `deny` e CIDR do operador.
 
 ## Instalação
 
-Depois de publicar o repositório, obtenha o código e execute, na VPS do Hermes:
+Na VPS do Hermes, obtenha o código e execute:
 
 ```bash
-git clone URL_DO_REPOSITORIO hermes-prospector
-bash hermes-prospector/install.sh --source URL_DO_REPOSITORIO --domain SEU_DOMINIO
+git clone https://github.com/andrealencarz/treg-hermes-plugin hermes-prospector
+bash hermes-prospector/install.sh --source https://github.com/andrealencarz/treg-hermes-plugin --domain SEU_DOMINIO
 ```
 
 Sem domínio, use `--ip IP_PUBLICO --operator-cidr SEU_IP/32`. O acesso será HTTP provisório restrito pelo `ufw`; nesse modo, cadastre a chave pelo terminal privado, não no navegador. O instalador cria a senha do painel por entrada privada, instala o plugin no Hermes, prepara o serviço systemd e configura Caddy quando há domínio. Ele pode ser executado novamente sem recriar banco, senha ou tarefas.
@@ -81,4 +81,4 @@ O script cria banco e auditoria privados nesse diretório e impede reutilizá-lo
 
 Para diagnosticar o endpoint sem criar uma campanha, `--catalog-example` usa por padrão o exemplo `coffee` em `Austin, TX`. `--probe-query` e `--probe-location` permitem alterar a consulta de diagnóstico; cada invocação com `--paid` faz no máximo uma chamada e exige um diretório novo. No teste local, “dentista” retornou um lugar em Fortaleza, enquanto “clínica odontológica” retornou zero. Use termos curtos e confira os resultados e custos antes de programar campanhas maiores.
 
-Consulte [COMPATIBILITY.md](COMPATIBILITY.md) para contratos verificados e [VERIFICATION.md](VERIFICATION.md) para o aceite na VPS. A licença deve ser definida pelo proprietário antes de qualquer publicação externa.
+Consulte [COMPATIBILITY.md](COMPATIBILITY.md) para contratos verificados e [VERIFICATION.md](VERIFICATION.md) para o aceite na VPS. A licença ainda não foi definida.
