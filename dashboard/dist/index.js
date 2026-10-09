@@ -6,6 +6,15 @@
   const h = React.createElement;
   const {useState, useEffect, useCallback} = SDK.hooks;
   const API = "/api/plugins/hermes-prospector";
+  const ABOUT = {
+    developer: "André Alencar",
+    website: "https://www.aalencar.com.br",
+    instagram: "https://www.instagram.com/empreendedorserialbr/",
+    instagramLabel: "@empreendedorserialbr",
+    email: "suporte@aalencar.com.br",
+    whatsapp: "+55 86 9999-7003",
+    whatsappUrl: "https://wa.me/558699997003",
+  };
   const money = n => "US$ " + ((Number(n) || 0) / 1000000).toFixed(4);
   const when = s => s ? new Date(s).toLocaleString("pt-BR") : "—";
   const item = (tag, props, ...children) => h(tag, props, ...children);
@@ -121,7 +130,7 @@
     }
 
     const tabs = [["dashboard","Leads"],["campaigns","Campanhas"],["schedule","Programação"],
-      ["runs","Execuções"],["settings","Configurações"]];
+      ["runs","Execuções"],["settings","Configurações"],["about","Sobre"]];
     const nav = h("nav", {className:"hp-nav"}, ...tabs.map(([id,label]) =>
       button(label, () => setPage(id), {key:id, className:page === id ? "active" : ""})));
 
@@ -227,7 +236,21 @@
               h("label",{className:"hp-day",key:d},h("input",{type:"checkbox",name:"days",value:i}),d))),
           field("Data e hora para execução única","once_at",{type:"datetime-local"}),
           field("Fuso IANA","timezone",{defaultValue:"America/Fortaleza",required:true}),
-          h("button",{type:"submit",disabled:busy},"Salvar em pausa"))));
+          h("button",{type:"submit",disabled:busy},"Salvar em pausa"))),
+      page === "about" && h("section",{className:"hp-about"},
+        h("article",{className:"hp-card"},
+          h("small",null,"HERMES PROSPECTOR"),
+          h("h2",null,"Sobre o plugin"),
+          h("p",null,"Campanhas, leads, custos e programação de buscas Treg no Hermes."),
+          h("p",null,"Desenvolvedor: ",h("strong",null,ABOUT.developer)),
+          h("p",null,"Versão 0.1.0.dev0")),
+        h("article",{className:"hp-card"},
+          h("h2",null,"Contato e suporte"),
+          h("dl",{className:"hp-contact-list"},
+            h("div",null,h("dt",null,"Site"),h("dd",null,h("a",{href:ABOUT.website,target:"_blank",rel:"noopener noreferrer"},ABOUT.website))),
+            h("div",null,h("dt",null,"Instagram"),h("dd",null,h("a",{href:ABOUT.instagram,target:"_blank",rel:"noopener noreferrer"},ABOUT.instagramLabel))),
+            h("div",null,h("dt",null,"E-mail"),h("dd",null,h("a",{href:"mailto:"+ABOUT.email},ABOUT.email))),
+            h("div",null,h("dt",null,"WhatsApp"),h("dd",null,h("a",{href:ABOUT.whatsappUrl,target:"_blank",rel:"noopener noreferrer"},ABOUT.whatsapp)))))));
   }
 
   window.__HERMES_PLUGINS__.register("hermes-prospector", ProspectorPage);

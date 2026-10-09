@@ -10,6 +10,8 @@ const expected = {
   schedule: ["Programar campanha", "Salvar em pausa"],
   runs: ["Nenhuma execução.", "Reconciliar custos"],
   settings: ["Chave Treg", "Validar e salvar", "Orçamento global", "Salvar teto"],
+  about: ["Sobre o plugin", "André Alencar", "https://www.aalencar.com.br",
+    "@empreendedorserialbr", "suporte@aalencar.com.br", "+55 86 9999-7003"],
 };
 
 function render(page, configured = false) {
@@ -69,3 +71,18 @@ assert.match(configuredText, /Chave salva:\s+••••••••WXYZ/);
 assert.ok(configuredText.includes("Substituir chave"));
 assert.ok(!configuredText.includes("test-token"));
 console.log("settings: identificador mascarado exibido");
+
+function anchors(node) {
+  if (!node || typeof node !== "object") return [];
+  if (Array.isArray(node)) return node.flatMap(anchors);
+  return [...(node.type === "a" ? [node.props] : []), ...(node.children || []).flatMap(anchors)];
+}
+
+const aboutLinks = anchors(render("about")).map(link => link.href);
+assert.deepEqual(aboutLinks, [
+  "https://www.aalencar.com.br",
+  "https://www.instagram.com/empreendedorserialbr/",
+  "mailto:suporte@aalencar.com.br",
+  "https://wa.me/558699997003",
+]);
+console.log("about: links de contato conferidos");
