@@ -1,0 +1,11 @@
+{
+  "name": "hermes-prospector",
+  "label": "Prospector",
+  "description": "Campanhas, leads, custos e agenda Treg dentro do Hermes",
+  "icon": "Search",
+  "version": "0.1.0.dev0",
+  "tab": {"path": "/prospector", "position": "after:plugins"},
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

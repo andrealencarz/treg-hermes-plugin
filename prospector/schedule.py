@@ -7,6 +7,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import uuid
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
@@ -73,7 +74,8 @@ def next_occurrences(spec: dict, count: int = 3, reference: datetime | None = No
 
 
 def _hermes_bin() -> str:
-    result = os.environ.get("HERMES_BIN") or shutil.which("hermes")
+    sibling = Path(sys.executable).parent / "hermes"
+    result = os.environ.get("HERMES_BIN") or shutil.which("hermes") or (str(sibling) if sibling.is_file() else None)
     if not result:
         raise DomainError("CLI Hermes não encontrada; configure HERMES_BIN no serviço")
     return result
@@ -94,14 +96,20 @@ def _script_path(campaign_id: str) -> Path:
 
 def _write_script(campaign_id: str):
     from .config import data_dir
-    executable = os.environ.get("PROSPECTOR_BIN") or str(data_dir() / "venv" / "bin" / "prospector")
-    if not executable or not Path(executable).is_absolute():
-        raise DomainError("PROSPECTOR_BIN precisa apontar para o executável do serviço")
+    executable = os.environ.get("PROSPECTOR_BIN")
+    if executable and not Path(executable).is_absolute():
+        raise DomainError("PROSPECTOR_BIN precisa ser absoluto")
     path = _script_path(campaign_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    command = " ".join(shlex.quote(value) for value in
-                       (executable, "--data-dir", str(data_dir()), "schedule-tick", campaign_id))
-    path.write_text("#!/bin/sh\n" + command + "\n", encoding="utf-8")
+    if executable:
+        prefix = shlex.quote(executable)
+    else:
+        plugin_root = Path(__file__).resolve().parents[1]
+        prefix = "PYTHONPATH=" + shlex.quote(str(plugin_root)) + " " + shlex.quote(sys.executable) + " -m prospector.cli"
+    common = prefix + " --data-dir " + shlex.quote(str(data_dir()))
+    tick = common + " schedule-tick " + shlex.quote(campaign_id)
+    worker = common + " worker-once"
+    path.write_text("#!/bin/sh\nset -eu\n" + tick + "\n" + worker + "\n", encoding="utf-8")
     path.chmod(0o700)
     return path
 

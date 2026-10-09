@@ -7,8 +7,11 @@ __pycache__/
 *.db-shm
 *.db-wal
 dist/
+!dashboard/dist/
+!dashboard/dist/**
 build/
 *.egg-info/
 .env
 .env.*
 !.env.example
+PRD_Hermes_Prospector_Treg.md

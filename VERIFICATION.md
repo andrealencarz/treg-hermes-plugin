@@ -3,10 +3,10 @@
 ## Executado localmente em 09/10/2026
 
 - `uv sync --extra test`
-- `bash scripts/test_local.sh`: 17 testes offline aprovados, incluindo contrato HTTP, limite de gasto, importação de legado, orçamento e reconciliação simulada.
-- Os mesmos 17 testes passaram também em Python 3.11.15, a versão mínima suportada.
-- `node --check prospector/static/app.js`: sintaxe JavaScript válida.
-- `bash -n install.sh update.sh uninstall.sh`: sintaxe dos scripts válida.
+- `bash scripts/test_local.sh`: 19 testes offline aprovados, incluindo a API do Dashboard e o script de agenda sem venv separada.
+- Os mesmos 19 testes passaram também em Python 3.11.15, a versão mínima suportada.
+- `node --check` validou o JS legado e o JS da aba integrada.
+- `bash -n scripts/test_local.sh`: sintaxe do script de testes válida.
 - `uv build`: sdist e wheel gerados após as alterações finais.
 
 Os testes usam respostas simuladas e nomes de exemplo marcados. Eles não demonstram acesso à VPS, capacidade real das fontes ou custo de chamada.
@@ -22,9 +22,9 @@ Os testes usam respostas simuladas e nomes de exemplo marcados. Eles não demons
 
 ## Pendente antes de release de produção
 
-1. Em uma VPS de teste com Hermes `0.21.5`, executar `hermes plugins doctor CAMINHO_DO_PLUGIN --ci` e `hermes plugins validate CAMINHO_DO_PLUGIN --install-deps`.
-2. Instalar com a URL do repositório, interromper e repetir o instalador; confirmar serviço, senha e banco preservados.
-3. Validar login por URL externa, TLS/DNS ou IP restrito, bloqueio de API sem sessão e retorno após reboot.
+1. Instalar pela tela **Plugins** do Dashboard Hermes `0.21.5`, usando a URL Git e deixando **Ativar após instalar** ligado. Conferir se o scanner aceita a origem personalizada.
+2. Reiniciar o Dashboard pelo controle da instalação; confirmar aba **Prospector**, API e dados preservados após reinício e atualização do plugin.
+3. Validar login por URL externa, HTTPS, bloqueio da API integrada sem sessão Hermes e retorno após reboot.
 4. Revalidar na VPS com uma chave Treg própria da instalação; o teste local não cobre rede, proxy ou perfil Hermes da VPS.
 5. Repetir a busca positiva na VPS e conferir os contatos retornados no painel, sem aumentar o teto de teste sem autorização.
 6. Criar duas campanhas, ativar horários distintos e conferir tarefas Hermes reais, pausa/retomada e próximo disparo.

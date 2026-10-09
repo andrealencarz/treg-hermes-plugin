@@ -15,7 +15,8 @@ if [[ -x .venv311/bin/python ]]; then
 fi
 if command -v node >/dev/null; then
   node --check prospector/static/app.js
+  node --check dashboard/dist/index.js
 fi
-bash -n install.sh update.sh uninstall.sh scripts/test_local.sh
+bash -n scripts/test_local.sh
 .venv/bin/python -m compileall -q prospector scripts
 echo "Verificações locais offline concluídas; nenhuma chamada paga foi feita."

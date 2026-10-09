@@ -1,0 +1,49 @@
+import importlib.util
+import json
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from prospector import schedule
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_dashboard_manifest_and_embedded_api(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    manifest = json.loads((ROOT / "dashboard/manifest.json").read_text())
+    assert manifest["name"] == "hermes-prospector"
+    assert manifest["tab"]["path"] == "/prospector"
+    assert (ROOT / "dashboard" / manifest["entry"]).is_file()
+    assert (ROOT / "dashboard" / manifest["css"]).is_file()
+    assert (ROOT / "dashboard" / manifest["api"]).is_file()
+
+    spec = importlib.util.spec_from_file_location("test_hermes_prospector_dashboard", ROOT / "dashboard/plugin_api.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    host = FastAPI()
+    host.include_router(module.router, prefix="/api/plugins/hermes-prospector")
+    with TestClient(host, base_url="https://testserver") as client:
+        base = "/api/plugins/hermes-prospector"
+        assert client.get(base + "/health").json()["mode"] == "hermes-dashboard"
+        assert client.get(base + "/status").status_code == 200
+        created = client.post(base + "/campaigns", json={
+            "name": "Exemplo", "niche": "dentista", "cities": [{"city": "Fortaleza", "uf": "CE"}],
+        })
+        assert created.status_code == 200, created.text
+        assert client.get(base + "/campaigns").json()[0]["name"] == "Exemplo"
+        assert client.patch(base + "/campaigns/nao-existe/state", json={"state": "paused"}).status_code == 400
+
+
+def test_ui_install_schedule_script_uses_hermes_python(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.delenv("PROSPECTOR_BIN", raising=False)
+    path = schedule._write_script("campaign-test")
+    content = path.read_text()
+    assert "PYTHONPATH=" in content
+    assert "-m prospector.cli" in content
+    assert "schedule-tick campaign-test" in content
+    assert "worker-once" in content
+    assert path.stat().st_mode & 0o777 == 0o700

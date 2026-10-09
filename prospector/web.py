@@ -70,7 +70,8 @@ class LoginIn(BaseModel):
     password: str
 
 
-def create_app(*, db_file: Path | None = None, start_worker: bool = True) -> FastAPI:
+def create_app(*, db_file: Path | None = None, start_worker: bool = True,
+               integrated: bool = False) -> FastAPI:
     stop = Event()
 
     @asynccontextmanager
@@ -94,12 +95,17 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True) -> Fas
             instance.close()
 
     def current(request: Request, db: ProspectorService = Depends(service)):
+        if integrated:
+            # O host Hermes autentica /api/plugins/* antes de chamar este router.
+            return {"csrf_token": ""}
         session = auth.get_session(db.conn, request.cookies.get("prospector_session"))
         if not session:
             raise HTTPException(status_code=401, detail="Faça login")
         return session
 
     def mutation(request: Request, session=Depends(current)):
+        if integrated:
+            return session
         csrf = request.headers.get("X-CSRF-Token", "")
         if not csrf or csrf != session["csrf_token"]:
             raise HTTPException(status_code=403, detail="Proteção CSRF: recarregue a página")

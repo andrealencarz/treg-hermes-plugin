@@ -1,6 +1,6 @@
 name: hermes-prospector
 version: 0.1.0.dev0
-description: Prospecção de empresas via Treg com painel próprio na VPS
+description: Prospecção de empresas via Treg no Dashboard do Hermes
 manifest_version: 2
 api_version: 1
 requires_hermes: ">=0.21.5"
