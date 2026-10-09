@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from . import auth, schedule, treg
 from .db import now
-from .secrets import read_token, save_token
+from .secrets import read_token, save_token, token_hint
 from .service import DomainError, ProspectorService
 from .worker import loop
 
@@ -161,7 +161,8 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
 
     @app.get("/api/status")
     def status(db: ProspectorService = Depends(service), _=Depends(current)):
-        return {**db.status(), "treg_configured": bool(read_token())}
+        token = read_token()
+        return {**db.status(), "treg_configured": bool(token), "treg_token_hint": token_hint(token)}
 
     @app.get("/api/campaigns")
     def campaigns(db: ProspectorService = Depends(service), _=Depends(current)):
@@ -284,7 +285,8 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
     @app.get("/api/settings/treg")
     def treg_settings(db: ProspectorService = Depends(service), _=Depends(current)):
         row = db.conn.execute("SELECT status,org,validated_at,error FROM credential_settings WHERE id=1").fetchone()
-        return {"configured": bool(read_token()), **dict(row)}
+        token = read_token()
+        return {"configured": bool(token), "token_hint": token_hint(token), **dict(row)}
 
     @app.post("/api/settings/treg/test")
     def test_token(payload: TokenIn, request: Request, _=Depends(mutation)):

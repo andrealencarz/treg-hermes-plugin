@@ -12,7 +12,7 @@ const expected = {
   settings: ["Chave Treg", "Validar e salvar", "Orçamento global", "Salvar teto"],
 };
 
-function render(page) {
+function render(page, configured = false) {
   let hook = 0;
   let component;
   const React = {createElement: (type, props, ...children) => ({type, props, children})};
@@ -20,7 +20,8 @@ function render(page) {
     useState(initial) {
       hook += 1;
       const value = hook === 1 ? page : hook === 2 ? {
-        treg_configured: false, leads: 0, campaigns: 0, queued: 0,
+        treg_configured: configured, treg_token_hint: configured ? "••••••••WXYZ" : null,
+        leads: 0, campaigns: 0, queued: 0,
         global_used_micro: 0, global_monthly_cap_micro: 200000,
         global_period: "2026-10",
       } : hook === 10 ? true : initial;
@@ -61,3 +62,10 @@ for (const [page, labels] of Object.entries(expected)) {
   }
   console.log(`${page}: conteúdo exibido`);
 }
+
+const configured = render("settings", true);
+const configuredText = flatten(configured);
+assert.match(configuredText, /Chave salva:\s+••••••••WXYZ/);
+assert.ok(configuredText.includes("Substituir chave"));
+assert.ok(!configuredText.includes("test-token"));
+console.log("settings: identificador mascarado exibido");

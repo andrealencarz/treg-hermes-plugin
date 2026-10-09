@@ -11,6 +11,13 @@ def read_token() -> str | None:
     return path.read_text(encoding="utf-8").strip() if path.exists() else None
 
 
+def token_hint(token: str | None) -> str | None:
+    """Display-only identifier; never return enough characters to reconstruct a short key."""
+    if not token:
+        return None
+    return "••••••••" + (token[-4:] if len(token) >= 12 else "")
+
+
 def save_token(token: str) -> None:
     if not token or "\n" in token or "\r" in token:
         raise ValueError("Chave inválida")
@@ -26,4 +33,3 @@ def save_token(token: str) -> None:
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
-

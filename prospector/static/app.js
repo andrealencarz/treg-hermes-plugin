@@ -44,7 +44,8 @@ async function refresh() {
   $("stat-cost").textContent=money(status.global_used_micro);
   $("global-budget").textContent=`${money(status.global_used_micro)} de ${money(status.global_monthly_cap_micro)} em ${status.global_period}`;
   $("connection-pill").textContent=status.treg_configured?"Treg configurado":"Treg não configurado";
-  $("treg-state").textContent=status.treg_configured?"Chave salva no servidor. O valor não é exibido.":"Nenhuma chave configurada.";
+  $("treg-state").textContent=status.treg_configured?`Chave salva: ${status.treg_token_hint || "••••••••"}. Digite outra chave para substituí-la.`:"Nenhuma chave configurada.";
+  $("treg-form").elements.token.placeholder=status.treg_token_hint || "";
   $("lead-campaign").innerHTML='<option value="">Todas as campanhas</option>'+list.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
   $("schedule-campaign").innerHTML='<option value="">Selecione</option>'+list.filter(c=>c.state!=="archived").map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
   renderCampaigns(); await loadLeads(); page();

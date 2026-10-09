@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from prospector import schedule
+from prospector.secrets import save_token, token_hint
 from prospector.service import ProspectorService
 
 
@@ -30,13 +31,29 @@ def test_dashboard_manifest_and_embedded_api(tmp_path, monkeypatch):
     with TestClient(host, base_url="https://testserver") as client:
         base = "/api/plugins/hermes-prospector"
         assert client.get(base + "/health").json()["mode"] == "hermes-dashboard"
-        assert client.get(base + "/status").status_code == 200
+        initial = client.get(base + "/status").json()
+        assert initial["treg_configured"] is False
+        assert initial["treg_token_hint"] is None
+        secret = "test-token-ABCDE"
+        save_token(secret)
+        status = client.get(base + "/status")
+        assert status.json()["treg_token_hint"] == "••••••••BCDE"
+        assert secret not in status.text
+        settings = client.get(base + "/settings/treg")
+        assert settings.json()["token_hint"] == "••••••••BCDE"
+        assert secret not in settings.text
+        save_token("other-token-WXYZ")
+        assert client.get(base + "/status").json()["treg_token_hint"] == "••••••••WXYZ"
         created = client.post(base + "/campaigns", json={
             "name": "Exemplo", "niche": "dentista", "cities": [{"city": "Fortaleza", "uf": "CE"}],
         })
         assert created.status_code == 200, created.text
         assert client.get(base + "/campaigns").json()[0]["name"] == "Exemplo"
         assert client.patch(base + "/campaigns/nao-existe/state", json={"state": "paused"}).status_code == 400
+
+
+def test_short_token_hint_never_reveals_token():
+    assert token_hint("short") == "••••••••"
 
 
 def test_ui_install_schedule_script_uses_hermes_python(tmp_path, monkeypatch):
