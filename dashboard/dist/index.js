@@ -88,6 +88,20 @@
       load().catch(e => {setError(String(e.message || e)); setReady(false);});
     }, []);
 
+    useEffect(function () {
+      if (!ready) return;
+      let current = true;
+      const timer = setTimeout(function () {
+        const params = new URLSearchParams({q:filter.q || "", campaign_id:filter.campaign_id || "",
+          status:filter.status || "", source:filter.source || "", site_quality:filter.site_quality || "",
+          page:String(filter.page || 1), size:"20"});
+        request("/leads?" + params.toString()).then(ls => {
+          if (current) { setLeads(ls); setError(""); }
+        }).catch(e => { if (current) setError(String(e.message || e)); });
+      }, 250);
+      return () => { current = false; clearTimeout(timer); };
+    }, [filter]);
+
     async function change(action, success) {
       setBusy(true); setError(""); setMessage("");
       try { await action(); await load(); setMessage(success || "Salvo."); return true; }
@@ -243,7 +257,6 @@
             h("option",{value:"poor"},"Site ruim"),
             h("option",{value:"good"},"Site bom"),
             h("option",{value:"unanalyzed"},"Não analisado")),
-          button("Filtrar",()=>load({...filter,page:1}).catch(e=>setError(String(e.message||e)))),
           button("Analisar sites da página",analyzePage,{disabled:busy || !leads.items.some(l=>l.website && !l.site_audit)}),
           button("CSV",exportCSV)),
         h("small",{className:"hp-filter-help"},"Site ruim: inacessível, página de terceiros ou SEO abaixo de 60. Não analisado: sem avaliação conclusiva."),
@@ -274,8 +287,8 @@
             h("td",null,when(l.last_seen_at)))) : [h("tr",{key:"empty"},h("td",{colSpan:5},"Nenhum lead encontrado."))]))),
         h("div", {className:"hp-pagination"},
           h("span",null,leads.total+" lead(s) · página "+leads.page),
-          button("Anterior",()=>load({...filter,page:Math.max(1,leads.page-1)}).catch(e=>setError(String(e.message||e))),{disabled:leads.page<=1}),
-          button("Próxima",()=>load({...filter,page:leads.page+1}).catch(e=>setError(String(e.message||e))),{disabled:leads.page*20>=leads.total})))),
+          button("Anterior",()=>setFilter({...filter,page:Math.max(1,leads.page-1)}),{disabled:leads.page<=1}),
+          button("Próxima",()=>setFilter({...filter,page:leads.page+1}),{disabled:leads.page*20>=leads.total})))),
       page === "campaigns" && h("section",{className:"hp-grid"},
         h("div",null,h("h2",null,"Campanhas"),...(campaigns.length ? campaigns.map(c=>h("article",{className:"hp-card",key:c.id},
           h("h3",null,c.name),h("p",null,c.niche+" · "+c.cities.map(x=>x.city+"/"+x.uf).join(", ")),

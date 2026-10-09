@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.1.0.dev8 — 09/10/2026
+
+- Busca e filtros de leads atualizam a lista automaticamente; a digitação usa uma pausa curta para evitar requisições a cada tecla.
+- Paginação mantém os filtros ativos sem precisar do botão **Filtrar**.
+
 ## 0.1.0.dev7 — 09/10/2026
 
 - Filtro de leads por situação do site: sem site, site ruim, site bom ou não analisado.

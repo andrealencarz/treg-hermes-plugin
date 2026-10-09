@@ -2,7 +2,7 @@
 
 Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e programação na própria interface web do Hermes. As fontes selecionáveis são Google Maps, Instagram e páginas de empresas do LinkedIn via Treg. Instalar ou ativar o plugin não inicia buscas pagas.
 
-**Estado:** versão `0.1.0.dev7`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
+**Estado:** versão `0.1.0.dev8`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
 
 ## Instalação pela interface do Hermes (v0.21.5)
 
