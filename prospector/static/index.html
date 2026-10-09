@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hermes Prospector</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div id="login" class="login-wrap" hidden>
+    <form id="login-form" class="login-card">
+      <div class="brand-symbol">H</div>
+      <p class="eyebrow">HERMES PROSPECTOR</p>
+      <h1>Entre no painel</h1>
+      <p>Use a senha configurada durante a instalação.</p>
+      <label>Senha <input id="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Entrar</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </div>
+
+  <div id="shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-symbol">H</span><div><strong>Hermes</strong><small>PROSPECTOR</small></div></div>
+      <nav aria-label="Navegação principal">
+        <a href="#dashboard" data-page="dashboard">Dashboard</a>
+        <a href="#campaigns" data-page="campaigns">Campanhas</a>
+        <a href="#schedule" data-page="schedule">Programação</a>
+        <a href="#runs" data-page="runs">Execuções</a>
+        <a href="#settings" data-page="settings">Configurações</a>
+      </nav>
+      <div class="sidebar-bottom"><span id="connection-pill" class="pill">Treg não configurado</span><button id="logout" class="text-button">Sair</button></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><p class="eyebrow">PROSPECÇÃO DE EMPRESAS</p><h1 id="page-title">Dashboard</h1></div><span id="today"></span></header>
+      <div id="notice" class="notice" hidden role="status"></div>
+
+      <section id="page-dashboard" class="page">
+        <div class="stats"><article><span>Leads no banco</span><strong id="stat-leads">—</strong></article><article><span>Campanhas</span><strong id="stat-campaigns">—</strong></article><article><span>Rodadas na fila</span><strong id="stat-queued">—</strong></article><article><span>Orçamento global usado</span><strong id="stat-cost">—</strong></article></div>
+        <div class="panel"><div class="panel-heading"><div><h2>Leads</h2><p>Resultados coletados pelas campanhas</p></div></div>
+          <div class="toolbar"><input id="lead-search" type="search" placeholder="Buscar nome, nicho, telefone, e-mail ou domínio"><select id="lead-campaign"><option value="">Todas as campanhas</option></select><select id="lead-status"><option value="">Todos os status</option><option>Novo</option><option>Em análise</option><option>Contatado</option><option>Proposta enviada</option><option>Fechado</option></select><select id="lead-sort"><option value="recent">Mais recentes</option><option value="name">Nome</option><option value="city">Cidade</option></select><select id="lead-size"><option>20</option><option>50</option><option>100</option></select><button id="lead-export">Exportar CSV</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Local</th><th>Contato</th><th>Status</th><th>Coletado</th></tr></thead><tbody id="lead-rows"></tbody></table></div>
+          <div class="pagination"><span id="lead-range"></span><div><button id="lead-prev">Anterior</button><button id="lead-next">Próxima</button></div></div>
+        </div>
+      </section>
+
+      <section id="page-campaigns" class="page" hidden>
+        <div class="grid-two"><div class="panel"><div class="panel-heading"><div><h2>Campanhas</h2><p>Uma rodada só começa quando você escolher Buscar agora.</p></div></div><div id="campaign-list"></div></div>
+          <form id="campaign-form" class="panel form-panel"><h2>Nova campanha</h2><label>Nome <input name="name" required maxlength="120" placeholder="Clínicas odontológicas — Nordeste"></label><label>Nicho <input name="niche" required maxlength="120" placeholder="clínica odontológica"></label><label>Serviço oferecido <input name="service" placeholder="Criação de sites e SEO"></label><label>Cidades e UF <textarea name="cities" required placeholder="Fortaleza, CE&#10;João Pessoa, PB&#10;Recife, PE"></textarea><small>Uma cidade por linha, no formato Cidade, UF.</small></label><div class="inline-fields"><label>Meta de leads <input name="target" type="number" min="1" max="1000" value="30"></label><label>Teto por rodada (USD) <input name="cap" type="number" min="0.01" step="0.01" value="1.00"></label></div><label>Teto mensal da campanha (USD) <input name="monthly" type="number" min="0.01" step="0.01" value="30.00"></label><button class="primary" type="submit">Criar campanha em rascunho</button><p id="campaign-error" class="error" role="alert"></p></form></div>
+      </section>
+
+      <section id="page-runs" class="page" hidden><div class="panel"><div class="panel-heading"><div><h2>Execuções</h2><p>Progresso, contagem e custo confirmado de cada rodada.</p></div><div class="button-row"><button id="reconcile-runs">Reconciliar pendências</button><button id="refresh-runs">Atualizar</button></div></div><div id="run-list"></div></div></section>
+
+      <section id="page-schedule" class="page" hidden><div class="grid-two"><div class="panel"><h2>Rotinas</h2><p>Cada campanha usa uma tarefa nativa do Hermes para enfileirar buscas no horário escolhido.</p><div id="schedule-list"></div></div><form id="schedule-form" class="panel form-panel"><h2>Programar campanha</h2><label>Campanha <select name="campaign_id" id="schedule-campaign" required><option value="">Selecione</option></select></label><label>Frequência <select name="frequency" id="schedule-frequency"><option value="daily">Todos os dias</option><option value="weekdays">Dias da semana</option><option value="once">Uma vez</option></select></label><label id="schedule-times-wrap">Horários (HH:MM, separados por vírgula) <input name="times" value="09:00" placeholder="09:00, 15:00"></label><label id="schedule-days-wrap" hidden>Dias da semana <select name="days" multiple size="7"><option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option><option value="3">Quinta</option><option value="4">Sexta</option><option value="5">Sábado</option><option value="6">Domingo</option></select><small>Use Ctrl/Cmd para selecionar mais de um.</small></label><label id="schedule-once-wrap" hidden>Data e hora <input name="once_at" type="datetime-local"></label><label>Fuso IANA <input name="timezone" value="America/Fortaleza" required></label><div class="button-row"><button id="preview-schedule" type="button">Prévia</button><button class="primary" type="submit">Salvar programação</button></div><p id="schedule-preview" class="muted"></p><p id="schedule-error" class="error" role="alert"></p></form></div></section>
+
+      <section id="page-settings" class="page" hidden><div class="grid-two"><div class="panel"><h2>Integração Treg</h2><p id="treg-state">Verificando estado…</p><p class="muted">A chave é enviada apenas pelo painel em HTTPS. Em acesso HTTP provisório, cadastre pelo terminal privado.</p><form id="treg-form"><label>Chave da API Treg <input name="token" type="password" autocomplete="off" required></label><label>Organização Treg (somente para token de identidade) <input name="org" placeholder="slug da equipe"></label><div class="button-row"><button id="test-token" type="button">Testar conexão</button><button class="primary" type="submit">Salvar ou substituir chave</button></div><p id="treg-error" class="error" role="alert"></p></form></div><div class="panel"><h2>Orçamento global</h2><p id="global-budget">—</p><p class="muted">O teto é compartilhado entre todas as campanhas. Reservas pendentes ocupam saldo até reconciliação.</p><form id="budget-form"><label>Teto mensal (USD) <input name="cap" type="number" min="0.01" step="0.01" value="30.00"></label><label>Fuso <input name="timezone" value="America/Fortaleza"></label><button type="submit">Salvar orçamento</button></form></div></div></section>
+    </main>
+  </div>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>

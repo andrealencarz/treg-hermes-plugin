@@ -1,0 +1,18 @@
+name: hermes-prospector
+version: 0.1.0.dev0
+description: Prospecção de empresas via Treg com painel próprio na VPS
+manifest_version: 2
+api_version: 1
+requires_hermes: ">=0.21.5"
+python_runtime: external
+provides_tools:
+  - prospector_status
+  - prospector_campaigns
+  - prospector_campaign_create
+  - prospector_configure
+  - prospector_campaign_update
+  - prospector_run
+  - prospector_runs
+  - prospector_list_leads
+  - prospector_schedule
+  - prospector_diagnose

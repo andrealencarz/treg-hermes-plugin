@@ -1,0 +1,11 @@
+include __init__.py
+include plugin.yaml
+include install.sh
+include update.sh
+include uninstall.sh
+include README.md
+include COMPATIBILITY.md
+include CHANGELOG.md
+include VERIFICATION.md
+recursive-include prospector/static *.html *.js *.css
+prune tests
