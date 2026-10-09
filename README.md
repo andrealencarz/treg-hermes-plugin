@@ -9,7 +9,7 @@ Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e
 1. Abra o Dashboard do Hermes e entre em **Plugins**.
 2. No campo de instalação por identificador/URL, cole `https://github.com/andrealencarz/treg-hermes-plugin`.
 3. Deixe **Ativar após instalar** ligado e clique **Instalar**. A origem é personalizada, então o Hermes pode mostrar um aviso de fonte não revisada.
-4. Reinicie o gateway pela tela **Sistema** do Hermes e recarregue o Dashboard. O Hermes 0.21.5 monta a API dos plugins ao iniciar o servidor; se a aba **Prospector** ainda indicar API indisponível, reinicie também o processo do Dashboard pelo controle da sua instalação e recarregue a página.
+4. Reinicie o serviço **Dashboard/serve do Hermes** pelo painel da sua hospedagem e recarregue a página. O Hermes 0.21.5 monta a API dos plugins quando esse serviço inicia. Reiniciar somente o gateway pela tela Sistema não monta a API nova.
 5. Abra **Prospector → Configurações** e cadastre sua chave Treg em uma sessão HTTPS. Para token de identidade, informe também o slug da organização. A chave é validada antes de ser salva.
 
 O GitHub é apenas a origem do código. O plugin cria seus dados, banco e segredo em `<HERMES_HOME>/plugin-data/hermes-prospector` no servidor. A chave não entra no repositório.

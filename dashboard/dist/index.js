@@ -129,7 +129,7 @@
       h("h1", null, "Hermes Prospector"),
       h("p", null, error ? "A API do painel ainda não está ativa no Hermes." : "Carregando painel…"),
       error && h("p", {className:"hp-error"}, error),
-      error && h("p", null, "Após instalar pela tela de Plugins, reinicie o gateway pela tela Sistema e recarregue esta aba. O Hermes 0.21.5 monta a API dos plugins na inicialização."),
+      error && h("p", null, "Após instalar pela tela de Plugins, reinicie o serviço Dashboard/serve do Hermes no painel da hospedagem e recarregue esta aba. O Hermes 0.21.5 monta a API dos plugins na inicialização."),
       button("Tentar novamente", () => load().catch(e => setError(String(e.message || e)))));
 
     return h("div", {id:"hp-root"},
