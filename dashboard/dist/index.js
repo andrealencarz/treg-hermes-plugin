@@ -169,7 +169,7 @@
         h("div", {className:"hp-pagination"},
           h("span",null,leads.total+" lead(s) · página "+leads.page),
           button("Anterior",()=>load({...filter,page:Math.max(1,leads.page-1)}).catch(e=>setError(String(e.message||e))),{disabled:leads.page<=1}),
-          button("Próxima",()=>load({...filter,page:leads.page+1}).catch(e=>setError(String(e.message||e))),{disabled:leads.page*20>=leads.total}))),
+          button("Próxima",()=>load({...filter,page:leads.page+1}).catch(e=>setError(String(e.message||e))),{disabled:leads.page*20>=leads.total})))),
       page === "campaigns" && h("section",{className:"hp-grid"},
         h("div",null,h("h2",null,"Campanhas"),...(campaigns.length ? campaigns.map(c=>h("article",{className:"hp-card",key:c.id},
           h("h3",null,c.name),h("p",null,c.niche+" · "+c.cities.map(x=>x.city+"/"+x.uf).join(", ")),
@@ -225,7 +225,7 @@
               h("label",{className:"hp-day",key:d},h("input",{type:"checkbox",name:"days",value:i}),d))),
           field("Data e hora para execução única","once_at",{type:"datetime-local"}),
           field("Fuso IANA","timezone",{defaultValue:"America/Fortaleza",required:true}),
-          h("button",{type:"submit",disabled:busy},"Salvar em pausa")))));
+          h("button",{type:"submit",disabled:busy},"Salvar em pausa"))));
   }
 
   window.__HERMES_PLUGINS__.register("hermes-prospector", ProspectorPage);

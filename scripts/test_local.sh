@@ -16,6 +16,7 @@ fi
 if command -v node >/dev/null; then
   node --check prospector/static/app.js
   node --check dashboard/dist/index.js
+  node tests/dashboard_ui_smoke.js
 fi
 bash -n scripts/test_local.sh
 .venv/bin/python -m compileall -q prospector scripts
