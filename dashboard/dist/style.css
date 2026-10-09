@@ -41,6 +41,10 @@
 #hp-root td a{color:#79d7be}
 #hp-root .hp-contact-actions{display:flex;flex-wrap:wrap;gap:4px 12px}
 #hp-root .hp-contact-actions a{white-space:nowrap}
+#hp-root .hp-site-audit{margin-top:8px;max-width:250px;font-size:.75rem;line-height:1.35}
+#hp-root .hp-site-audit summary{cursor:pointer;color:#79d7be}
+#hp-root .hp-site-audit ul{margin:4px 0 8px;padding-left:18px}
+#hp-root .hp-audit-button{margin-top:6px;padding:5px 8px;font-size:.75rem}
 #hp-root .hp-pagination{justify-content:flex-end;margin-top:12px}
 #hp-root .hp-message,#hp-root .hp-error{padding:10px 14px;border-radius:8px;margin:0 0 16px}
 #hp-root .hp-message{background:#163b38;color:#9ce8cc}

@@ -100,6 +100,15 @@ assert.ok(!missingLinks.some(link => link.href?.startsWith("https://wa.me/") || 
 const invalidLinks = anchors(render("dashboard",true,[],null,[{...lead,phone:"123",email:"invalid@example.com\nBcc:x"}]));
 assert.ok(!invalidLinks.some(link => link.href?.startsWith("https://wa.me/") || link.href?.startsWith("mailto:")));
 console.log("leads: links de WhatsApp e e-mail conforme contatos válidos");
+const auditLead = {...lead,site_audit:{availability:"online",page_type:"delivery",provider:"iFood",
+  seo_score:null,issues:["Página em plataforma de terceiros; SEO do site próprio não aplicável"]}};
+const auditText = flatten(render("dashboard",true,[],null,[auditLead]));
+assert.ok(auditText.includes("No ar · iFood"));
+assert.ok(auditText.includes("Atualizar análise"));
+assert.ok(auditText.includes("Página em plataforma de terceiros"));
+assert.ok(flatten(render("dashboard",true,[],null,[{...lead,site_audit:{...auditLead.site_audit,
+  availability:"offline",page_type:"unknown",provider:null}}])).includes("Fora do ar"));
+console.log("leads: resultado da análise do site exibido");
 
 const campaign = {id:"campaign-1",name:"Clínica Estética",niche:"estética",service:"Marketing",
   cities:[{city:"Teresina",uf:"PI"}],sources:["google_maps","instagram"],state:"draft",

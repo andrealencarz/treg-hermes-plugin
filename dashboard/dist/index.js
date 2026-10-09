@@ -32,6 +32,15 @@
     return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)
       ? "mailto:" + encodeURIComponent(address) : null;
   };
+  const siteTypeLabels = {website:"Site",links:"Página de links",possible_links:"Possível agregador de links",
+    delivery:"Delivery",marketplace:"Marketplace",social:"Rede social",messaging:"Mensagens",unknown:"Tipo desconhecido"};
+  const auditLabel = audit => {
+    if (!audit) return "Ainda não analisado";
+    const access = {online:"No ar",offline:"Fora do ar",blocked:"Acesso bloqueado",error:"Erro de acesso",unsafe:"Endereço não público"}[audit.availability] || "Não avaliado";
+    const kind = siteTypeLabels[audit.page_type] || audit.page_type;
+    const seo = audit.seo_score == null ? "" : ` · SEO ${audit.seo_score}/100${audit.seo_score < 60 ? " (atenção)" : ""}`;
+    return `${access} · ${audit.provider || kind}${seo}`;
+  };
   const sourceOptions = [["google_maps","Google Maps"],["instagram","Instagram"],["linkedin","LinkedIn"]];
   const when = s => s ? new Date(s).toLocaleString("pt-BR") : "—";
   const item = (tag, props, ...children) => h(tag, props, ...children);
@@ -166,6 +175,29 @@
       } catch (e) { setError(String(e.message || e)); }
     }
 
+    async function analyzePage() {
+      const targets = leads.items.filter(l => l.website && !l.site_audit);
+      if (!targets.length) { setMessage("Não há sites pendentes nesta página."); return; }
+      setBusy(true); setError("");
+      let next = 0, completed = 0, failures = 0;
+      async function worker() {
+        while (next < targets.length) {
+          const lead = targets[next++];
+          try { await request("/leads/" + encodeURIComponent(lead.id) + "/analyze-site", "POST"); }
+          catch (_) { failures++; }
+          completed++;
+          setMessage(`Analisando sites: ${completed} de ${targets.length}…`);
+        }
+      }
+      try {
+        await Promise.all(Array.from({length:Math.min(3,targets.length)},worker));
+        await load();
+        setMessage(`${completed-failures} site(s) analisado(s) nesta página.`);
+        if (failures) setError(`${failures} análise(s) falharam. Tente novamente nos leads pendentes.`);
+      } catch (e) { setError(String(e.message || e)); }
+      finally { setBusy(false); }
+    }
+
     const tabs = [["dashboard","Leads"],["campaigns","Campanhas"],["schedule","Programação"],
       ["runs","Execuções"],["settings","Configurações"],["about","Sobre"]];
     const nav = h("nav", {className:"hp-nav"}, ...tabs.map(([id,label]) =>
@@ -203,6 +235,7 @@
           h("select",{value:filter.source,onChange:e=>setFilter({...filter,source:e.target.value,page:1})},
             h("option",{value:""},"Todas as fontes"),...sourceOptions.map(([id,label])=>h("option",{key:id,value:id},label))),
           button("Filtrar",()=>load({...filter,page:1}).catch(e=>setError(String(e.message||e)))),
+          button("Analisar sites da página",analyzePage,{disabled:busy || !leads.items.some(l=>l.website && !l.site_audit)}),
           button("CSV",exportCSV)),
         h("div", {className:"hp-table-wrap"}, h("table",null,
           h("thead",null,h("tr",null,...["Empresa","Cidade/UF","Contato","Status","Coletado"].map(x=>h("th",{key:x},x)))),
@@ -216,7 +249,16 @@
                 whatsappUrl(l.phone) && h("a",{href:whatsappUrl(l.phone),target:"_blank",rel:"noopener noreferrer", "aria-label":"Abrir WhatsApp de " + l.name},"WhatsApp"),
                 emailUrl(l.email) && h("a",{href:emailUrl(l.email),"aria-label":"Enviar e-mail para " + l.name},"E-mail")),
               !l.website && !whatsappUrl(l.phone) && !emailUrl(l.email) && "—",
-              l.phone && h("small",null,l.phone),l.email && h("small",null,l.email)),
+              l.phone && h("small",null,l.phone),l.email && h("small",null,l.email),
+              l.website && h("div",{className:"hp-site-audit"},
+                h("span",null,auditLabel(l.site_audit)),
+                l.site_audit && h("small",null,"Verificado: " + when(l.site_audit.checked_at)),
+                l.site_audit && (l.site_audit.issues || []).length > 0 && h("details",null,
+                  h("summary",null,"Detalhes da análise"),
+                  h("ul",null,...l.site_audit.issues.map((issue,i)=>h("li",{key:i},issue)))),
+                button(l.site_audit ? "Atualizar análise" : "Analisar site",
+                  () => change(() => request("/leads/"+encodeURIComponent(l.id)+"/analyze-site","POST"),"Análise do site atualizada."),
+                  {disabled:busy,className:"hp-audit-button"}))),
             h("td",null,h("select",{value:l.status,onChange:e=>change(() => request("/leads/"+l.id+"/status","PATCH",{status:e.target.value}),"Status atualizado.")},
               ...["Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>h("option",{key:s},s)))),
             h("td",null,when(l.last_seen_at)))) : [h("tr",{key:"empty"},h("td",{colSpan:5},"Nenhum lead encontrado."))]))),

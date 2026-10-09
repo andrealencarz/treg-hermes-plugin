@@ -1,6 +1,7 @@
 let csrf = "";
 let leadPage = 1;
 let leadTotal = 0;
+let currentLeads = [];
 let campaigns = [];
 const $ = id => document.getElementById(id);
 const moneyFormat = new Intl.NumberFormat("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:6});
@@ -17,6 +18,14 @@ const emailUrl = email => {
   const address = String(email || "").trim();
   return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)
     ? `mailto:${encodeURIComponent(address)}` : null;
+};
+const siteTypeLabels = {website:"Site",links:"Página de links",possible_links:"Possível agregador de links",
+  delivery:"Delivery",marketplace:"Marketplace",social:"Rede social",messaging:"Mensagens",unknown:"Tipo desconhecido"};
+const auditLabel = audit => {
+  if (!audit) return "Ainda não analisado";
+  const access={online:"No ar",offline:"Fora do ar",blocked:"Acesso bloqueado",error:"Erro de acesso",unsafe:"Endereço não público"}[audit.availability]||"Não avaliado";
+  const seo=audit.seo_score==null?"":` · SEO ${audit.seo_score}/100${audit.seo_score<60?" (atenção)":""}`;
+  return `${access} · ${audit.provider||siteTypeLabels[audit.page_type]||audit.page_type}${seo}`;
 };
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const sourceNames = {google_maps:"Google Maps",instagram:"Instagram",linkedin:"LinkedIn"};
@@ -89,16 +98,19 @@ function leadParams() {
 
 async function loadLeads() {
   const params=leadParams();
-  const result=await api(`/api/leads?${params}`); leadTotal=result.total;
+  const result=await api(`/api/leads?${params}`); leadTotal=result.total; currentLeads=result.items;
+  $("lead-analyze").disabled=!currentLeads.some(l=>l.website&&!l.site_audit);
   $("lead-rows").innerHTML=result.items.length?result.items.map(l=>{
     const wa=whatsappUrl(l.phone), mail=emailUrl(l.email);
     const links=[l.website?`<a href="${esc(l.website)}" rel="noopener noreferrer" target="_blank">Site</a>`:"",
       wa?`<a href="${esc(wa)}" rel="noopener noreferrer" target="_blank" aria-label="Abrir WhatsApp de ${esc(l.name)}">WhatsApp</a>`:"",
       mail?`<a href="${esc(mail)}" aria-label="Enviar e-mail para ${esc(l.name)}">E-mail</a>`:""].filter(Boolean).join(" ");
-    return `<tr><td><button class="link-button" data-lead="${esc(l.id)}">${esc(l.name)}</button><small>${esc(l.niche||"Nicho não informado")}</small></td><td>${esc(l.city||"—")}/${esc(l.uf||"—")}</td><td><div class="contact-actions">${links||"—"}</div>${l.phone?`<small>${esc(l.phone)}</small>`:""}${l.email?`<small>${esc(l.email)}</small>`:""}</td><td><select data-lead-status="${esc(l.id)}">${["Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>`<option ${s===l.status?"selected":""}>${s}</option>`).join("")}</select></td><td>${date(l.last_seen_at)}</td></tr>`;
+    const audit=l.website?`<div class="site-audit"><span>${esc(auditLabel(l.site_audit))}</span>${l.site_audit?`<small>Verificado: ${date(l.site_audit.checked_at)}</small>`:""}${l.site_audit?.issues?.length?`<details><summary>Detalhes da análise</summary><ul>${l.site_audit.issues.map(issue=>`<li>${esc(issue)}</li>`).join("")}</ul></details>`:""}<button data-site-audit="${esc(l.id)}">${l.site_audit?"Atualizar análise":"Analisar site"}</button></div>`:"";
+    return `<tr><td><button class="link-button" data-lead="${esc(l.id)}">${esc(l.name)}</button><small>${esc(l.niche||"Nicho não informado")}</small></td><td>${esc(l.city||"—")}/${esc(l.uf||"—")}</td><td><div class="contact-actions">${links||"—"}</div>${l.phone?`<small>${esc(l.phone)}</small>`:""}${l.email?`<small>${esc(l.email)}</small>`:""}${audit}</td><td><select data-lead-status="${esc(l.id)}">${["Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>`<option ${s===l.status?"selected":""}>${s}</option>`).join("")}</select></td><td>${date(l.last_seen_at)}</td></tr>`;
   }).join(""):'<tr><td colspan="5" class="empty">Nenhum lead encontrado. Ajuste os filtros ou faça a primeira busca.</td></tr>';
   document.querySelectorAll("[data-lead]").forEach(button=>button.onclick=async()=>{try{const l=await api(`/api/leads/${button.dataset.lead}`);alert(`${l.name}\n${l.city}/${l.uf}\nTelefone: ${l.phone||"não informado"}\nE-mail: ${l.email||"não informado"}\nFontes: ${l.sources.map(s=>`${s.source}: ${s.evidence_url||s.external_id}`).join("; ")}`)}catch(e){notice(e.message,true)}});
   document.querySelectorAll("[data-lead-status]").forEach(select=>select.onchange=async()=>{try{await api(`/api/leads/${select.dataset.leadStatus}/status`,{method:"PATCH",body:JSON.stringify({status:select.value})});notice("Status atualizado.")}catch(e){notice(e.message,true)}});
+  document.querySelectorAll("[data-site-audit]").forEach(button=>button.onclick=async()=>{button.disabled=true;try{await api(`/api/leads/${encodeURIComponent(button.dataset.siteAudit)}/analyze-site`,{method:"POST"});notice("Análise do site atualizada.");await loadLeads()}catch(e){notice(e.message,true);button.disabled=false}});
   const first=leadTotal?(leadPage-1)*result.size+1:0, last=Math.min(leadPage*result.size,leadTotal);
   $("lead-range").textContent=`${first}–${last} de ${leadTotal}`;
   $("lead-prev").disabled=leadPage<=1; $("lead-next").disabled=last>=leadTotal;
@@ -145,6 +157,16 @@ $("schedule-form").addEventListener("submit",async event=>{event.preventDefault(
 $("lead-prev").onclick=()=>{leadPage--;loadLeads()};$("lead-next").onclick=()=>{leadPage++;loadLeads()};
 for(const id of ["lead-search","lead-campaign","lead-status","lead-sort","lead-size"])$(id).addEventListener("input",()=>{leadPage=1;loadLeads()});
 $("lead-export").onclick=()=>{const params=leadParams();params.delete("page");params.delete("size");location.href=`/api/leads/export.csv?${params}`};
+$("lead-analyze").onclick=async()=>{
+  const targets=currentLeads.filter(l=>l.website&&!l.site_audit).slice(0,20);
+  if(!targets.length)return;
+  $("lead-analyze").disabled=true;
+  let next=0, failures=0;
+  async function worker(){while(next<targets.length){const lead=targets[next++];try{await api(`/api/leads/${encodeURIComponent(lead.id)}/analyze-site`,{method:"POST"})}catch(_){failures++}}}
+  await Promise.all(Array.from({length:Math.min(3,targets.length)},worker));
+  notice(`${targets.length-failures} site(s) analisado(s).${failures?` ${failures} falharam.`:""}`,Boolean(failures));
+  await loadLeads();
+};
 window.addEventListener("hashchange",page);
 $("today").textContent=new Date().toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"});
 init();

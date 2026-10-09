@@ -256,7 +256,8 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
                    db: ProspectorService = Depends(service), _=Depends(current)):
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["Nome", "Nicho", "Cidade", "UF", "Site", "Telefone", "E-mail", "Fontes", "Status", "Coletado"])
+        writer.writerow(["Nome", "Nicho", "Cidade", "UF", "Site", "Telefone", "E-mail", "Fontes", "Status", "Coletado",
+                         "Disponibilidade do site", "Tipo de página", "Plataforma", "SEO (0-100)", "Observações do site", "Analisado em"])
         page_number = 1
         while True:
             batch = db.leads(campaign_id=campaign_id, q=q, page=page_number, size=100,
@@ -264,6 +265,10 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
             for row in batch["items"]:
                 values = [row.get(key) or "" for key in ("name", "niche", "city", "uf", "website", "phone", "email")]
                 values += [", ".join(row["sources"]), row.get("status") or "", row.get("last_seen_at") or ""]
+                audit = row.get("site_audit") or {}
+                values += [audit.get("availability") or "", audit.get("page_type") or "", audit.get("provider") or "",
+                           audit.get("seo_score") if audit.get("seo_score") is not None else "",
+                           "; ".join(audit.get("issues") or []), audit.get("checked_at") or ""]
                 writer.writerow(["'" + str(v) if str(v).startswith(("=", "+", "-", "@", "\t", "\r")) else v for v in values])
             if page_number * 100 >= batch["total"]:
                 break
@@ -277,6 +282,10 @@ def create_app(*, db_file: Path | None = None, start_worker: bool = True,
         if not value:
             raise HTTPException(status_code=404, detail="Lead não encontrado")
         return value
+
+    @app.post("/api/leads/{lead_id}/analyze-site")
+    def analyze_site(lead_id: str, db: ProspectorService = Depends(service), _=Depends(mutation)):
+        return db.analyze_lead_site(lead_id)
 
     @app.patch("/api/leads/{lead_id}/status")
     def lead_status(lead_id: str, payload: StatusIn, db: ProspectorService = Depends(service), _=Depends(mutation)):

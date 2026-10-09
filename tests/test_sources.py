@@ -125,5 +125,5 @@ def test_old_campaign_migrates_to_google_maps(tmp_path):
     service.close()
     migrated = ProspectorService(path)
     assert migrated.campaign(campaign["id"])["sources"] == ["google_maps"]
-    assert migrated.conn.execute("SELECT MAX(version) FROM schema_migration").fetchone()[0] == 6
+    assert migrated.conn.execute("SELECT 1 FROM schema_migration WHERE version=6").fetchone()
     migrated.close()

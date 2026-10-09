@@ -2,7 +2,7 @@
 
 Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e programação na própria interface web do Hermes. As fontes selecionáveis são Google Maps, Instagram e páginas de empresas do LinkedIn via Treg. Instalar ou ativar o plugin não inicia buscas pagas.
 
-**Estado:** versão `0.1.0.dev4`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
+**Estado:** versão `0.1.0.dev5`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
 
 ## Instalar pela interface do Hermes
 
@@ -24,6 +24,12 @@ O GitHub é apenas a origem do código. O plugin cria seus dados, banco e segred
 O teto global padrão do produto é US$ 30/mês e o teto padrão por rodada é US$ 1. Ajuste esses valores antes de qualquer busca. A autorização de US$ 0,20 dada para os testes locais não autoriza novas chamadas pagas na instalação.
 
 Cada fonte selecionada faz uma chamada por cidade, sujeita aos tetos da rodada, da campanha e do espaço de trabalho. Google Maps procura estabelecimentos; Instagram procura perfis públicos por termo e cidade no texto da busca; LinkedIn procura páginas de empresas por termo e localização. A localização de um perfil do Instagram não é verificada pela fonte. O painel mostra a origem de cada lead e o CSV inclui a coluna **Fontes**. As integrações sociais foram validadas com contratos públicos e respostas simuladas; a primeira execução real deve ser feita com teto pequeno e conferida em **Execuções**.
+
+## Análise de sites dos leads
+
+Em **Leads**, use **Analisar site** em um lead ou **Analisar sites da página** para verificar até 20 leads ainda sem análise, com até três verificações simultâneas. A análise consulta a página pública diretamente, sem Treg e sem custo de API. O resultado salvo mostra disponibilidade, tipo de página, plataforma reconhecida e data da verificação. **Detalhes da análise** lista os sinais encontrados; o CSV também inclui essas colunas. Se o site do lead mudar, a análise antiga deixa de ser exibida até nova verificação.
+
+O indicador de SEO (0 a 100) é uma triagem técnica da página inicial: título, meta description, H1, diretiva noindex, URL canônica, idioma e viewport. Ele não mede posição no Google. Em páginas de links, delivery, marketplace e redes sociais, o SEO do site próprio não é avaliado. HTTP 401/403/429 aparece como **Acesso bloqueado**, distinto de **Fora do ar**. A consulta tem limite de tempo e tamanho; endereços internos ou privados são recusados.
 
 ## Segurança e custos
 

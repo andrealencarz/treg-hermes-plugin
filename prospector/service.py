@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from . import treg
 from .db import connect, now, transaction
 from .sources import SOURCES, normalize, selected
+from .site_audit import analyze as analyze_website
 
 
 class DomainError(ValueError):
@@ -383,13 +384,48 @@ class ProspectorService:
         for lead in items:
             lead["sources"] = [r["source"] for r in self.conn.execute(
                 "SELECT source FROM lead_source WHERE lead_id=? ORDER BY source", (lead["id"],))]
+            lead["site_audit"] = self._site_audit(lead["id"], lead["website"])
         return {"total": total, "page": page, "size": size, "items": items}
+
+    def _site_audit(self, lead_id: str, website: str | None) -> dict | None:
+        row = self.conn.execute("SELECT * FROM lead_site_audit WHERE lead_id=? AND website=?",
+                                (lead_id, website)).fetchone() if website else None
+        if not row:
+            return None
+        result = dict(row)
+        result["issues"] = json.loads(result.pop("issues_json"))
+        return result
+
+    def analyze_lead_site(self, lead_id: str) -> dict:
+        row = self.conn.execute("SELECT website FROM lead WHERE id=?", (lead_id,)).fetchone()
+        if not row:
+            raise DomainError("Lead não encontrado")
+        website = row["website"]
+        if not website:
+            raise DomainError("Lead sem site para analisar")
+        result = analyze_website(website)
+        with transaction(self.conn):
+            current = self.conn.execute("SELECT website FROM lead WHERE id=?", (lead_id,)).fetchone()
+            if not current or current["website"] != website:
+                raise DomainError("O site do lead mudou; tente novamente")
+            self.conn.execute("""INSERT INTO lead_site_audit
+                (lead_id,website,checked_at,availability,page_type,provider,seo_score,issues_json,http_status,final_url)
+                VALUES(?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(lead_id) DO UPDATE SET website=excluded.website,checked_at=excluded.checked_at,
+                availability=excluded.availability,page_type=excluded.page_type,provider=excluded.provider,
+                seo_score=excluded.seo_score,issues_json=excluded.issues_json,
+                http_status=excluded.http_status,final_url=excluded.final_url""",
+                (lead_id, website, now(), result["availability"], result["page_type"], result["provider"],
+                 result["seo_score"], json.dumps(result["issues"], ensure_ascii=False),
+                 result["http_status"], result["final_url"]))
+        return self._site_audit(lead_id, website)
 
     def lead(self, lead_id: str) -> dict | None:
         row = self.conn.execute("SELECT * FROM lead WHERE id=?", (lead_id,)).fetchone()
         if not row:
             return None
         value = dict(row)
+        value["site_audit"] = self._site_audit(lead_id, value["website"])
         value["sources"] = [dict(r) for r in self.conn.execute("SELECT source,external_id,evidence_url,collected_at FROM lead_source WHERE lead_id=?", (lead_id,))]
         value["campaigns"] = [dict(r) for r in self.conn.execute("SELECT campaign_id,notes,first_seen_at,last_seen_at FROM lead_campaign WHERE lead_id=?", (lead_id,))]
         return value

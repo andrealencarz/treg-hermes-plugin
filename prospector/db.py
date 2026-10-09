@@ -75,6 +75,11 @@ CREATE TABLE IF NOT EXISTS lead_source (
  lead_id TEXT NOT NULL REFERENCES lead(id), source TEXT NOT NULL, external_id TEXT NOT NULL,
  evidence_url TEXT, collected_at TEXT NOT NULL, PRIMARY KEY(source,external_id)
 );
+CREATE TABLE IF NOT EXISTS lead_site_audit (
+ lead_id TEXT PRIMARY KEY REFERENCES lead(id), website TEXT NOT NULL, checked_at TEXT NOT NULL,
+ availability TEXT NOT NULL, page_type TEXT NOT NULL, provider TEXT,
+ seo_score INTEGER, issues_json TEXT NOT NULL, http_status INTEGER, final_url TEXT
+);
 CREATE TABLE IF NOT EXISTS lead_campaign (
  lead_id TEXT NOT NULL REFERENCES lead(id), campaign_id TEXT NOT NULL REFERENCES campaign(id),
  first_execution_id TEXT NOT NULL REFERENCES execution(id), first_seen_at TEXT NOT NULL,
@@ -127,8 +132,10 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=10000")
     try:
         version = conn.execute("SELECT COALESCE(MAX(version),0) FROM schema_migration").fetchone()[0]
+        versions = {row[0] for row in conn.execute("SELECT version FROM schema_migration")}
     except sqlite3.OperationalError:
         version = 0
+        versions = set()
     if version < 5:
         conn.executescript(SCHEMA)
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(1,?)", (now(),))
@@ -139,12 +146,18 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(3,?)", (now(),))
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(4,?)", (now(),))
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(5,?)", (now(),))
-    if version < 6:
+    if 6 not in versions:
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(campaign)")}
         if "sources_json" not in columns:
             conn.execute("ALTER TABLE campaign ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[\"google_maps\"]'")
             conn.execute("UPDATE campaign SET sources_json=json_array(source)")
         conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(6,?)", (now(),))
+    if 7 not in versions:
+        conn.execute("""CREATE TABLE IF NOT EXISTS lead_site_audit (
+            lead_id TEXT PRIMARY KEY REFERENCES lead(id), website TEXT NOT NULL, checked_at TEXT NOT NULL,
+            availability TEXT NOT NULL, page_type TEXT NOT NULL, provider TEXT,
+            seo_score INTEGER, issues_json TEXT NOT NULL, http_status INTEGER, final_url TEXT)""")
+        conn.execute("INSERT OR IGNORE INTO schema_migration(version,applied_at) VALUES(7,?)", (now(),))
     try:
         path.chmod(0o600)
     except OSError:

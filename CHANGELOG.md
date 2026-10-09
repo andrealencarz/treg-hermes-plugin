@@ -1,5 +1,11 @@
 # Histórico
 
+## 0.1.0.dev5 — 09/10/2026
+
+- Análise sob demanda de sites de leads, individual ou até 20 por página, sem chamadas Treg.
+- Detecta disponibilidade, bloqueios, sinais básicos de SEO e páginas de links, delivery, marketplace e redes sociais; persiste resultado e inclui no CSV.
+- Acesso HTTP seguro limita redirecionamentos, tamanho, tempo e impede endereços privados.
+
 ## 0.1.0.dev4 — 09/10/2026
 
 - A lista de leads oferece links diretos para WhatsApp e e-mail quando os respectivos contatos estão disponíveis.

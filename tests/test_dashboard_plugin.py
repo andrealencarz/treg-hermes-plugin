@@ -50,6 +50,7 @@ def test_dashboard_manifest_and_embedded_api(tmp_path, monkeypatch):
         assert created.status_code == 200, created.text
         assert client.get(base + "/campaigns").json()[0]["name"] == "Exemplo"
         assert client.patch(base + "/campaigns/nao-existe/state", json={"state": "paused"}).status_code == 400
+        assert client.post(base + "/leads/nao-existe/analyze-site").status_code == 400
 
 
 def test_short_token_hint_never_reveals_token():
