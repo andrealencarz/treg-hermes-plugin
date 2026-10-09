@@ -11,7 +11,7 @@ const expected = {
   runs: ["Nenhuma execução.", "Reconciliar custos"],
   settings: ["Chave Treg", "Validar e salvar", "Orçamento global", "Salvar teto"],
   about: ["Sobre o plugin", "André Alencar", "https://www.aalencar.com.br",
-    "@empreendedorserialbr", "suporte@aalencar.com.br", "+55 86 9999-7003"],
+    "@empreendedorserialbr", "YouTube", "@empreendedorserial", "suporte@aalencar.com.br", "+55 86 9999-7003"],
 };
 
 function render(page, configured = false) {
@@ -82,6 +82,7 @@ const aboutLinks = anchors(render("about")).map(link => link.href);
 assert.deepEqual(aboutLinks, [
   "https://www.aalencar.com.br",
   "https://www.instagram.com/empreendedorserialbr/",
+  "https://www.youtube.com/@empreendedorserial",
   "mailto:suporte@aalencar.com.br",
   "https://wa.me/558699997003",
 ]);

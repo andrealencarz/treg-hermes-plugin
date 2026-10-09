@@ -11,6 +11,8 @@
     website: "https://www.aalencar.com.br",
     instagram: "https://www.instagram.com/empreendedorserialbr/",
     instagramLabel: "@empreendedorserialbr",
+    youtube: "https://www.youtube.com/@empreendedorserial",
+    youtubeLabel: "@empreendedorserial",
     email: "suporte@aalencar.com.br",
     whatsapp: "+55 86 9999-7003",
     whatsappUrl: "https://wa.me/558699997003",
@@ -249,6 +251,7 @@
           h("dl",{className:"hp-contact-list"},
             h("div",null,h("dt",null,"Site"),h("dd",null,h("a",{href:ABOUT.website,target:"_blank",rel:"noopener noreferrer"},ABOUT.website))),
             h("div",null,h("dt",null,"Instagram"),h("dd",null,h("a",{href:ABOUT.instagram,target:"_blank",rel:"noopener noreferrer"},ABOUT.instagramLabel))),
+            h("div",null,h("dt",null,"YouTube"),h("dd",null,h("a",{href:ABOUT.youtube,target:"_blank",rel:"noopener noreferrer"},ABOUT.youtubeLabel))),
             h("div",null,h("dt",null,"E-mail"),h("dd",null,h("a",{href:"mailto:"+ABOUT.email},ABOUT.email))),
             h("div",null,h("dt",null,"WhatsApp"),h("dd",null,h("a",{href:ABOUT.whatsappUrl,target:"_blank",rel:"noopener noreferrer"},ABOUT.whatsapp)))))));
   }
