@@ -117,7 +117,9 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     else:
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         path.parent.chmod(0o700)
-    conn = sqlite3.connect(path, timeout=10, isolation_level=None)
+    # O FastAPI pode abrir/usar/fechar uma dependência síncrona em threads distintas.
+    # Cada requisição recebe sua própria conexão; o worker usa outra conexão própria.
+    conn = sqlite3.connect(path, timeout=10, isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA journal_mode=WAL")

@@ -3,8 +3,8 @@
 ## Executado localmente em 09/10/2026
 
 - `uv sync --extra test`
-- `bash scripts/test_local.sh`: 19 testes offline aprovados, incluindo a API do Dashboard e o script de agenda sem venv separada.
-- Os mesmos 19 testes passaram também em Python 3.11.15, a versão mínima suportada.
+- `bash scripts/test_local.sh`: 20 testes offline aprovados, incluindo a API do Dashboard, o script de agenda sem venv separada e o uso da conexão SQLite entre threads.
+- Os mesmos 20 testes passaram também em Python 3.11.15, a versão mínima suportada.
 - `node --check` validou o JS legado e o JS da aba integrada.
 - `bash -n scripts/test_local.sh`: sintaxe do script de testes válida.
 - `uv build`: sdist e wheel gerados após as alterações finais.

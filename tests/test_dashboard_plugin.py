@@ -1,11 +1,13 @@
 import importlib.util
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from prospector import schedule
+from prospector.service import ProspectorService
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,3 +49,10 @@ def test_ui_install_schedule_script_uses_hermes_python(tmp_path, monkeypatch):
     assert "schedule-tick campaign-test" in content
     assert "worker-once" in content
     assert path.stat().st_mode & 0o777 == 0o700
+
+
+def test_sqlite_request_connection_can_be_used_and_closed_in_other_threads(tmp_path):
+    service = ProspectorService(tmp_path / "cross-thread.db")
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        assert pool.submit(lambda: service.conn.execute("SELECT 1").fetchone()[0]).result() == 1
+        pool.submit(service.close).result()
