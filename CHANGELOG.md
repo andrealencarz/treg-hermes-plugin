@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.1.0.dev4 — 09/10/2026
+
+- A lista de leads oferece links diretos para WhatsApp e e-mail quando os respectivos contatos estão disponíveis.
+- Os dados de telefone e e-mail continuam visíveis; contatos inválidos não geram links.
+
 ## 0.1.0.dev3 — 09/10/2026
 
 - Valores em USD usam formatação brasileira: `US$ 1,00` para um dólar e `US$ 1.000,00` para mil dólares, com até seis casas para custos pequenos.

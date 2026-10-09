@@ -14,7 +14,7 @@ const expected = {
     "@empreendedorserialbr", "YouTube", "@empreendedorserial", "suporte@aalencar.com.br", "+55 86 9999-7003"],
 };
 
-function render(page, configured = false, campaignItems = [], editingId = null) {
+function render(page, configured = false, campaignItems = [], editingId = null, leadItems = []) {
   let hook = 0;
   let component;
   const React = {createElement: (type, props, ...children) => ({type, props, children})};
@@ -26,7 +26,8 @@ function render(page, configured = false, campaignItems = [], editingId = null) 
         leads: 0, campaigns: 0, queued: 0,
         global_used_micro: 0, global_monthly_cap_micro: 200000,
         global_period: "2026-10",
-      } : hook === 3 ? campaignItems : hook === 10 ? true : hook === 12 ? editingId : initial;
+      } : hook === 3 ? campaignItems : hook === 6 ? {items:leadItems,total:leadItems.length,page:1,size:20}
+        : hook === 10 ? true : hook === 12 ? editingId : initial;
       return [value, () => {}];
     },
     useEffect() {},
@@ -87,6 +88,18 @@ assert.deepEqual(aboutLinks, [
   "https://wa.me/558699997003",
 ]);
 console.log("about: links de contato conferidos");
+
+const lead = {id:"lead-1",name:"Clínica Exemplo",city:"Teresina",uf:"PI",status:"Novo",
+  phone:"+55 (86) 99814-1883",email:"contato@exemplo.com.br",website:"https://exemplo.com.br",sources:["google_maps"]};
+const leadLinks = anchors(render("dashboard",true,[],null,[lead]));
+assert.ok(leadLinks.some(link => link.href === "https://wa.me/5586998141883" && link.target === "_blank"));
+assert.ok(leadLinks.some(link => link.href === "mailto:contato%40exemplo.com.br"));
+assert.ok(leadLinks.some(link => link.href === "https://exemplo.com.br"));
+const missingLinks = anchors(render("dashboard",true,[],null,[{...lead,phone:"",email:""}]));
+assert.ok(!missingLinks.some(link => link.href?.startsWith("https://wa.me/") || link.href?.startsWith("mailto:")));
+const invalidLinks = anchors(render("dashboard",true,[],null,[{...lead,phone:"123",email:"invalid@example.com\nBcc:x"}]));
+assert.ok(!invalidLinks.some(link => link.href?.startsWith("https://wa.me/") || link.href?.startsWith("mailto:")));
+console.log("leads: links de WhatsApp e e-mail conforme contatos válidos");
 
 const campaign = {id:"campaign-1",name:"Clínica Estética",niche:"estética",service:"Marketing",
   cities:[{city:"Teresina",uf:"PI"}],sources:["google_maps","instagram"],state:"draft",

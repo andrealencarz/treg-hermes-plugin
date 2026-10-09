@@ -39,6 +39,8 @@
 #hp-root th{font-size:.78rem;opacity:.7}
 #hp-root td select{min-width:130px}
 #hp-root td a{color:#79d7be}
+#hp-root .hp-contact-actions{display:flex;flex-wrap:wrap;gap:4px 12px}
+#hp-root .hp-contact-actions a{white-space:nowrap}
 #hp-root .hp-pagination{justify-content:flex-end;margin-top:12px}
 #hp-root .hp-message,#hp-root .hp-error{padding:10px 14px;border-radius:8px;margin:0 0 16px}
 #hp-root .hp-message{background:#163b38;color:#9ce8cc}

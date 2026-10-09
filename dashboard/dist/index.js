@@ -19,6 +19,19 @@
   };
   const moneyFormat = new Intl.NumberFormat("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:6});
   const money = n => "US$ " + moneyFormat.format((Number(n) || 0) / 1000000);
+  const whatsappUrl = phone => {
+    const raw = String(phone || "").trim();
+    const digits = raw.replace(/\D/g, "");
+    const number = digits.length === 10 || digits.length === 11 ? "55" + digits : digits;
+    return (number.startsWith("55") && (number.length === 12 || number.length === 13)) ||
+      (raw.startsWith("+") && number.length >= 8 && number.length <= 15)
+      ? "https://wa.me/" + number : null;
+  };
+  const emailUrl = email => {
+    const address = String(email || "").trim();
+    return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)
+      ? "mailto:" + encodeURIComponent(address) : null;
+  };
   const sourceOptions = [["google_maps","Google Maps"],["instagram","Instagram"],["linkedin","LinkedIn"]];
   const when = s => s ? new Date(s).toLocaleString("pt-BR") : "—";
   const item = (tag, props, ...children) => h(tag, props, ...children);
@@ -197,8 +210,13 @@
             h("td",null,h("strong",null,l.name),h("small",null,l.niche || ""),
               h("small",null,(l.sources || []).map(s=>sourceOptions.find(x=>x[0]===s)?.[1] || s).join(" · "))),
             h("td",null,(l.city || "—") + "/" + (l.uf || "—")),
-            h("td",null,l.website ? h("a",{href:l.website,target:"_blank",rel:"noopener noreferrer"},"Site") : "—",
-              h("small",null,l.phone || l.email || "")),
+            h("td",null,
+              h("div",{className:"hp-contact-actions"},
+                l.website && h("a",{href:l.website,target:"_blank",rel:"noopener noreferrer"},"Site"),
+                whatsappUrl(l.phone) && h("a",{href:whatsappUrl(l.phone),target:"_blank",rel:"noopener noreferrer", "aria-label":"Abrir WhatsApp de " + l.name},"WhatsApp"),
+                emailUrl(l.email) && h("a",{href:emailUrl(l.email),"aria-label":"Enviar e-mail para " + l.name},"E-mail")),
+              !l.website && !whatsappUrl(l.phone) && !emailUrl(l.email) && "—",
+              l.phone && h("small",null,l.phone),l.email && h("small",null,l.email)),
             h("td",null,h("select",{value:l.status,onChange:e=>change(() => request("/leads/"+l.id+"/status","PATCH",{status:e.target.value}),"Status atualizado.")},
               ...["Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>h("option",{key:s},s)))),
             h("td",null,when(l.last_seen_at)))) : [h("tr",{key:"empty"},h("td",{colSpan:5},"Nenhum lead encontrado."))]))),

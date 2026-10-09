@@ -5,6 +5,19 @@ let campaigns = [];
 const $ = id => document.getElementById(id);
 const moneyFormat = new Intl.NumberFormat("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:6});
 const money = micro => `US$ ${moneyFormat.format((Number(micro) || 0) / 1000000)}`;
+const whatsappUrl = phone => {
+  const raw = String(phone || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  const number = digits.length === 10 || digits.length === 11 ? "55" + digits : digits;
+  return (number.startsWith("55") && (number.length === 12 || number.length === 13)) ||
+    (raw.startsWith("+") && number.length >= 8 && number.length <= 15)
+    ? `https://wa.me/${number}` : null;
+};
+const emailUrl = email => {
+  const address = String(email || "").trim();
+  return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address)
+    ? `mailto:${encodeURIComponent(address)}` : null;
+};
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const sourceNames = {google_maps:"Google Maps",instagram:"Instagram",linkedin:"LinkedIn"};
 const sourceChecks = c => Object.entries(sourceNames).map(([id,label])=>`<label><input type="checkbox" name="sources" value="${id}" ${(c.sources||["google_maps"]).includes(id)?"checked":""}> ${label}</label>`).join("");
@@ -77,7 +90,13 @@ function leadParams() {
 async function loadLeads() {
   const params=leadParams();
   const result=await api(`/api/leads?${params}`); leadTotal=result.total;
-  $("lead-rows").innerHTML=result.items.length?result.items.map(l=>`<tr><td><button class="link-button" data-lead="${esc(l.id)}">${esc(l.name)}</button><small>${esc(l.niche||"Nicho não informado")}</small></td><td>${esc(l.city||"—")}/${esc(l.uf||"—")}</td><td>${l.website?`<a href="${esc(l.website)}" rel="noopener noreferrer" target="_blank">Site</a>`:"Site não informado"}<small>${esc(l.phone||l.email||"")}</small></td><td><select data-lead-status="${esc(l.id)}">${["Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>`<option ${s===l.status?"selected":""}>${s}</option>`).join("")}</select></td><td>${date(l.last_seen_at)}</td></tr>`).join(""):'<tr><td colspan="5" class="empty">Nenhum lead encontrado. Ajuste os filtros ou faça a primeira busca.</td></tr>';
+  $("lead-rows").innerHTML=result.items.length?result.items.map(l=>{
+    const wa=whatsappUrl(l.phone), mail=emailUrl(l.email);
+    const links=[l.website?`<a href="${esc(l.website)}" rel="noopener noreferrer" target="_blank">Site</a>`:"",
+      wa?`<a href="${esc(wa)}" rel="noopener noreferrer" target="_blank" aria-label="Abrir WhatsApp de ${esc(l.name)}">WhatsApp</a>`:"",
+      mail?`<a href="${esc(mail)}" aria-label="Enviar e-mail para ${esc(l.name)}">E-mail</a>`:""].filter(Boolean).join(" ");
+    return `<tr><td><button class="link-button" data-lead="${esc(l.id)}">${esc(l.name)}</button><small>${esc(l.niche||"Nicho não informado")}</small></td><td>${esc(l.city||"—")}/${esc(l.uf||"—")}</td><td><div class="contact-actions">${links||"—"}</div>${l.phone?`<small>${esc(l.phone)}</small>`:""}${l.email?`<small>${esc(l.email)}</small>`:""}</td><td><select data-lead-status="${esc(l.id)}">${["Novo","Em análise","Contatado","Proposta enviada","Fechado"].map(s=>`<option ${s===l.status?"selected":""}>${s}</option>`).join("")}</select></td><td>${date(l.last_seen_at)}</td></tr>`;
+  }).join(""):'<tr><td colspan="5" class="empty">Nenhum lead encontrado. Ajuste os filtros ou faça a primeira busca.</td></tr>';
   document.querySelectorAll("[data-lead]").forEach(button=>button.onclick=async()=>{try{const l=await api(`/api/leads/${button.dataset.lead}`);alert(`${l.name}\n${l.city}/${l.uf}\nTelefone: ${l.phone||"não informado"}\nE-mail: ${l.email||"não informado"}\nFontes: ${l.sources.map(s=>`${s.source}: ${s.evidence_url||s.external_id}`).join("; ")}`)}catch(e){notice(e.message,true)}});
   document.querySelectorAll("[data-lead-status]").forEach(select=>select.onchange=async()=>{try{await api(`/api/leads/${select.dataset.leadStatus}/status`,{method:"PATCH",body:JSON.stringify({status:select.value})});notice("Status atualizado.")}catch(e){notice(e.message,true)}});
   const first=leadTotal?(leadPage-1)*result.size+1:0, last=Math.min(leadPage*result.size,leadTotal);
