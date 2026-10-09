@@ -24,6 +24,20 @@ def _obj(row):
     return dict(row) if row else None
 
 
+def _clean_cities(cities: list[dict]) -> list[dict]:
+    if not cities or len(cities) > 30:
+        raise DomainError("Informe de 1 a 30 cidades")
+    clean = []
+    for entry in cities:
+        city = str(entry.get("city") or "").strip()
+        uf = str(entry.get("uf") or "").strip().upper()
+        if not city or len(city) > 100 or len(uf) != 2 or not uf.isalpha():
+            raise DomainError("Cidade e UF inválidas")
+        if {"city": city, "uf": uf} not in clean:
+            clean.append({"city": city, "uf": uf})
+    return clean
+
+
 class ProspectorService:
     def __init__(self, path: Path | None = None):
         self.conn = connect(path)
@@ -38,16 +52,7 @@ class ProspectorService:
         name, niche = name.strip(), niche.strip()
         if not name or not niche or len(name) > 120 or len(niche) > 120:
             raise DomainError("Informe nome e nicho com até 120 caracteres")
-        if not cities or len(cities) > 30:
-            raise DomainError("Informe de 1 a 30 cidades")
-        clean = []
-        for entry in cities:
-            city = str(entry.get("city") or "").strip()
-            uf = str(entry.get("uf") or "").strip().upper()
-            if not city or len(city) > 100 or len(uf) != 2 or not uf.isalpha():
-                raise DomainError("Cidade e UF inválidas")
-            if {"city": city, "uf": uf} not in clean:
-                clean.append({"city": city, "uf": uf})
+        clean = _clean_cities(cities)
         if not 1 <= target_leads <= 1000 or run_cap_micro <= 0 or monthly_cap_micro <= 0:
             raise DomainError("Meta ou orçamento inválido")
         try:
@@ -80,6 +85,7 @@ class ProspectorService:
         return [self.campaign(row["id"]) for row in self.conn.execute("SELECT id FROM campaign ORDER BY created_at DESC")]
 
     def update_campaign(self, campaign_id: str, *, name: str | None = None, niche: str | None = None,
+                        service: str | None = None,
                         cities: list[dict] | None = None, target_leads: int | None = None,
                         run_cap_micro: int | None = None, monthly_cap_micro: int | None = None,
                         sources: list[str] | None = None) -> dict:
@@ -88,16 +94,16 @@ class ProspectorService:
             raise DomainError("Campanha inexistente ou arquivada")
         values = {"name": name if name is not None else old["name"],
                   "niche": niche if niche is not None else old["niche"],
+                  "service": service if service is not None else old["service"],
                   "cities": cities if cities is not None else old["cities"],
                   "sources": sources if sources is not None else old["sources"],
                   "target_leads": target_leads if target_leads is not None else old["target_leads"],
                   "run_cap_micro": run_cap_micro if run_cap_micro is not None else old["run_cap_micro"],
                   "monthly_cap_micro": monthly_cap_micro if monthly_cap_micro is not None else old["monthly_cap_micro"]}
-        # Reutiliza a validação de criação sem persistir uma campanha provisória.
-        if not str(values["name"]).strip() or not str(values["niche"]).strip():
-            raise DomainError("Nome e nicho são obrigatórios")
-        if not values["cities"] or any(not x.get("city") or len(str(x.get("uf", ""))) != 2 for x in values["cities"]):
-            raise DomainError("Cidades inválidas")
+        values["name"], values["niche"] = values["name"].strip(), values["niche"].strip()
+        if not values["name"] or not values["niche"] or len(values["name"]) > 120 or len(values["niche"]) > 120:
+            raise DomainError("Informe nome e nicho com até 120 caracteres")
+        values["cities"] = _clean_cities(values["cities"])
         if not 1 <= values["target_leads"] <= 1000 or values["run_cap_micro"] <= 0 or values["monthly_cap_micro"] <= 0:
             raise DomainError("Meta ou orçamento inválido")
         try:
@@ -105,9 +111,9 @@ class ProspectorService:
         except ValueError as exc:
             raise DomainError(str(exc)) from exc
         with transaction(self.conn):
-            self.conn.execute("""UPDATE campaign SET name=?,niche=?,cities_json=?,source=?,sources_json=?,target_leads=?,
+            self.conn.execute("""UPDATE campaign SET name=?,niche=?,service=?,cities_json=?,source=?,sources_json=?,target_leads=?,
                 run_cap_micro=?,monthly_cap_micro=?,version=version+1,updated_at=? WHERE id=?""",
-                (values["name"].strip(), values["niche"].strip(), json.dumps(values["cities"], ensure_ascii=False),
+                (values["name"], values["niche"], values["service"].strip(), json.dumps(values["cities"], ensure_ascii=False),
                  values["sources"][0], json.dumps(values["sources"]),
                  values["target_leads"], values["run_cap_micro"], values["monthly_cap_micro"], now(), campaign_id))
         return self.campaign(campaign_id)

@@ -2,7 +2,7 @@
 
 Plugin para Hermes `0.21.5` que organiza campanhas, leads, execuções, custos e programação na própria interface web do Hermes. As fontes selecionáveis são Google Maps, Instagram e páginas de empresas do LinkedIn via Treg. Instalar ou ativar o plugin não inicia buscas pagas.
 
-**Estado:** versão `0.1.0.dev1`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
+**Estado:** versão `0.1.0.dev2`. A interface e os adaptadores foram testados localmente; Instagram e LinkedIn ainda precisam de validação com chamadas reais na instalação do usuário.
 
 ## Instalar pela interface do Hermes
 
@@ -17,7 +17,7 @@ O GitHub é apenas a origem do código. O plugin cria seus dados, banco e segred
 ## Primeira campanha
 
 1. Em **Configurações**, ajuste o teto mensal global. Para uma primeira validação pequena, use um teto de até US$ 0,20, observando qualquer gasto já realizado no mesmo mês.
-2. Em **Campanhas**, crie um rascunho com nicho e cidade/UF, marque uma ou mais fontes e escolha um teto por rodada adequado. Use um termo curto, como `dentista`. O teste local com esse termo em Fortaleza retornou um lugar no Google Maps; os resultados variam por fonte, região e disponibilidade no Treg. Para incluir ou desmarcar uma fonte depois, use **Salvar fontes** no cartão da campanha. Rodadas já enfileiradas preservam a seleção anterior.
+2. Em **Campanhas**, crie um rascunho com nicho e cidade/UF, marque uma ou mais fontes e escolha um teto por rodada adequado. Use um termo curto, como `dentista`. O teste local com esse termo em Fortaleza retornou um lugar no Google Maps; os resultados variam por fonte, região e disponibilidade no Treg. Use **Editar** para alterar nome, nicho, serviço, cidades, fontes, meta e tetos; ou **Salvar fontes** para alterar apenas a seleção de fontes. Rodadas já enfileiradas preservam os dados anteriores.
 3. Clique **Buscar agora**. A página **Execuções** mostra estado e custo; **Leads** permite filtrar, atualizar status e exportar CSV.
 4. Em **Programação**, salve horários e fuso. A agenda fica pausada até clicar **Ativar**. O cron do Hermes executa um script sem LLM que enfileira e processa a rodada.
 

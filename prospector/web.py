@@ -35,6 +35,7 @@ class CampaignIn(BaseModel):
 class CampaignUpdate(BaseModel):
     name: str | None = None
     niche: str | None = None
+    service: str | None = None
     cities: list[dict] | None = None
     sources: list[str] | None = None
     target_leads: int | None = None

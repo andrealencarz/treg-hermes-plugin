@@ -1,5 +1,11 @@
 # Histórico
 
+## 0.1.0.dev2 — 09/10/2026
+
+- Botão **Editar** e formulário completo nas campanhas do Dashboard Hermes.
+- API de edição permite atualizar serviço e valida cidades, além de nome, nicho, fontes, meta e tetos.
+- Testes da edição no painel e da persistência pela API.
+
 ## 0.1.0.dev1 — 09/10/2026
 
 - Campanhas podem selecionar Google Maps, Instagram e LinkedIn, inclusive adicionar ou desmarcar fontes após a criação.

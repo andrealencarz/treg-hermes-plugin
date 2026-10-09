@@ -38,5 +38,14 @@ def test_campaign_sources_can_be_added_and_removed_through_api(tmp_path: Path):
         assert campaign["sources"] == ["google_maps", "instagram"]
         url = "/api/campaigns/" + campaign["id"]
         assert client.patch(url, json={"sources": ["linkedin"]}, headers=headers).json()["sources"] == ["linkedin"]
+        edited = client.patch(url, json={"name":"Clínica nova", "niche":"estética", "service":"Marketing",
+            "cities":[{"city":"Teresina", "uf":"pi"}], "target_leads":40,
+            "run_cap_micro":500_000, "monthly_cap_micro":2_000_000, "sources":["instagram", "linkedin"]},
+            headers=headers).json()
+        assert edited["name"] == "Clínica nova" and edited["service"] == "Marketing"
+        assert edited["cities"] == [{"city":"Teresina", "uf":"PI"}]
+        assert edited["target_leads"] == 40 and edited["run_cap_micro"] == 500_000
+        assert edited["sources"] == ["instagram", "linkedin"]
+        assert client.patch(url, json={"cities":[{"city":"Sem UF", "uf":"X"}]}, headers=headers).status_code == 400
         assert client.patch(url, json={"sources": []}, headers=headers).status_code == 400
-        assert client.get("/api/campaigns").json()[0]["sources"] == ["linkedin"]
+        assert client.get("/api/campaigns").json()[0]["sources"] == ["instagram", "linkedin"]

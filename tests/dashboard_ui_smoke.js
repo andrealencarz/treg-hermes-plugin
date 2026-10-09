@@ -14,7 +14,7 @@ const expected = {
     "@empreendedorserialbr", "YouTube", "@empreendedorserial", "suporte@aalencar.com.br", "+55 86 9999-7003"],
 };
 
-function render(page, configured = false) {
+function render(page, configured = false, campaignItems = [], editingId = null) {
   let hook = 0;
   let component;
   const React = {createElement: (type, props, ...children) => ({type, props, children})};
@@ -26,7 +26,7 @@ function render(page, configured = false) {
         leads: 0, campaigns: 0, queued: 0,
         global_used_micro: 0, global_monthly_cap_micro: 200000,
         global_period: "2026-10",
-      } : hook === 10 ? true : initial;
+      } : hook === 3 ? campaignItems : hook === 10 ? true : hook === 12 ? editingId : initial;
       return [value, () => {}];
     },
     useEffect() {},
@@ -87,3 +87,20 @@ assert.deepEqual(aboutLinks, [
   "https://wa.me/558699997003",
 ]);
 console.log("about: links de contato conferidos");
+
+const campaign = {id:"campaign-1",name:"Clínica Estética",niche:"estética",service:"Marketing",
+  cities:[{city:"Teresina",uf:"PI"}],sources:["google_maps","instagram"],state:"draft",
+  target_leads:30,run_cap_micro:1000000,monthly_cap_micro:2000000};
+assert.ok(flatten(render("campaigns",true,[campaign])).includes("Editar"));
+const editTree = render("campaigns",true,[campaign],campaign.id);
+assert.ok(flatten(editTree).includes("Salvar alterações"));
+function namedFields(node) {
+  if (!node || typeof node !== "object") return [];
+  if (Array.isArray(node)) return node.flatMap(namedFields);
+  return [...(node.props?.name ? [node.props] : []), ...(node.children || []).flatMap(namedFields)];
+}
+const editFields = namedFields(editTree);
+assert.ok(editFields.some(x => x.name === "service" && x.defaultValue === "Marketing"));
+assert.ok(editFields.some(x => x.name === "cities" && x.defaultValue === "Teresina, PI"));
+assert.ok(editFields.some(x => x.name === "sources" && x.value === "instagram" && x.defaultChecked));
+console.log("campaigns: edição completa com dados existentes exibida");

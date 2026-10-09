@@ -47,6 +47,7 @@
     const [message, setMessage] = useState("");
     const [ready, setReady] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [editingId, setEditingId] = useState(null);
 
     const load = useCallback(async function (query) {
       const f = query || filter;
@@ -70,19 +71,32 @@
       finally { setBusy(false); }
     }
 
-    function createCampaign(event) {
-      event.preventDefault();
-      const form = event.currentTarget;
+    function campaignData(form) {
       const data = new FormData(form);
-      const cities = String(data.get("cities") || "").split("\n").filter(Boolean).map(line => {
+      const cities = String(data.get("cities") || "").split("\n").filter(line => line.trim()).map(line => {
         const parts = line.split(","); return {city:(parts[0] || "").trim(), uf:(parts[1] || "").trim()};
       });
-      change(() => request("/campaigns", "POST", {
-        name:data.get("name"), niche:data.get("niche"), service:data.get("service") || "",
+      return {
+        name:String(data.get("name") || ""), niche:String(data.get("niche") || ""), service:String(data.get("service") || ""),
         cities, sources:data.getAll("sources"), target_leads:Number(data.get("target")),
         run_cap_micro:Math.round(Number(data.get("cap"))*1000000),
         monthly_cap_micro:Math.round(Number(data.get("monthly"))*1000000),
-      }), "Campanha criada em rascunho.").then(ok => {if (ok) form.reset();});
+      };
+    }
+
+    function createCampaign(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      change(() => request("/campaigns", "POST", campaignData(form)),
+             "Campanha criada em rascunho.").then(ok => {if (ok) form.reset();});
+    }
+
+    function saveCampaign(event, campaignId) {
+      event.preventDefault();
+      const payload = campaignData(event.currentTarget);
+      change(() => request("/campaigns/"+campaignId, "PATCH", payload),
+             "Campanha atualizada. Rodadas já enfileiradas mantêm os dados anteriores.")
+        .then(ok => {if (ok) setEditingId(null);});
     }
 
     function sourceChecks(active) {
@@ -195,12 +209,29 @@
         h("div",null,h("h2",null,"Campanhas"),...(campaigns.length ? campaigns.map(c=>h("article",{className:"hp-card",key:c.id},
           h("h3",null,c.name),h("p",null,c.niche+" · "+c.cities.map(x=>x.city+"/"+x.uf).join(", ")),
           h("p",null,c.state+" · meta "+c.target_leads+" · rodada "+money(c.run_cap_micro)),
-          h("form",{className:"hp-sources-form",onSubmit:e=>{e.preventDefault();
+          editingId === c.id ? h("form",{className:"hp-edit-form",onSubmit:e=>saveCampaign(e,c.id)},
+            h("h4",null,"Editar campanha"),
+            field("Nome","name",{required:true,maxLength:120,defaultValue:c.name}),
+            field("Nicho para busca","niche",{required:true,maxLength:120,defaultValue:c.niche}),
+            field("Serviço oferecido","service",{defaultValue:c.service || ""}),
+            field("Cidades (Cidade, UF por linha)","cities",{tag:"textarea",required:true,rows:4,
+              defaultValue:c.cities.map(x=>x.city+", "+x.uf).join("\n")}),
+            h("div",{className:"hp-sources-form"},h("strong",null,"Fontes para buscar"),sourceChecks(c.sources || ["google_maps"])),
+            field("Meta de leads","target",{type:"number",min:1,max:1000,required:true,defaultValue:c.target_leads}),
+            field("Teto por rodada (USD)","cap",{type:"number",min:"0.01",step:"0.01",required:true,
+              defaultValue:(c.run_cap_micro/1000000).toFixed(2)}),
+            field("Teto mensal (USD)","monthly",{type:"number",min:"0.01",step:"0.01",required:true,
+              defaultValue:(c.monthly_cap_micro/1000000).toFixed(2)}),
+            h("div",{className:"hp-actions"},h("button",{type:"submit",disabled:busy},"Salvar alterações"),
+              button("Cancelar",()=>setEditingId(null))))
+            : h("form",{className:"hp-sources-form",onSubmit:e=>{e.preventDefault();
             const sources=new FormData(e.currentTarget).getAll("sources");
             change(()=>request("/campaigns/"+c.id,"PATCH",{sources}),"Fontes atualizadas. A rodada já enfileirada mantém as fontes anteriores.");}},
             h("strong",null,"Fontes da campanha"),sourceChecks(c.sources || ["google_maps"]),
             h("button",{type:"submit",disabled:busy||c.state==="archived"},"Salvar fontes")),
           h("div",{className:"hp-actions"},
+            button(editingId === c.id ? "Fechar edição" : "Editar",()=>setEditingId(editingId === c.id ? null : c.id),
+              {disabled:busy||c.state==="archived"}),
             button("Buscar agora",()=>{if(window.confirm("Executar busca paga até "+money(c.run_cap_micro)+"?"))
               change(()=>request("/campaigns/"+c.id+"/runs","POST"),"Busca enfileirada.");},{disabled:busy||!status.treg_configured||c.state==="archived"}),
             button("Duplicar",()=>change(()=>request("/campaigns/"+c.id+"/duplicate","POST"),"Campanha duplicada.")),
@@ -261,7 +292,7 @@
           h("h2",null,"Sobre o plugin"),
           h("p",null,"Campanhas, leads, custos e programação de buscas Treg no Hermes."),
           h("p",null,"Desenvolvedor: ",h("strong",null,ABOUT.developer)),
-          h("p",null,"Versão 0.1.0.dev1")),
+          h("p",null,"Versão 0.1.0.dev2")),
         h("article",{className:"hp-card"},
           h("h2",null,"Contato e suporte"),
           h("dl",{className:"hp-contact-list"},
