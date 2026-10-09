@@ -17,7 +17,8 @@
     whatsapp: "+55 86 9999-7003",
     whatsappUrl: "https://wa.me/558699997003",
   };
-  const money = n => "US$ " + ((Number(n) || 0) / 1000000).toFixed(4);
+  const moneyFormat = new Intl.NumberFormat("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:6});
+  const money = n => "US$ " + moneyFormat.format((Number(n) || 0) / 1000000);
   const sourceOptions = [["google_maps","Google Maps"],["instagram","Instagram"],["linkedin","LinkedIn"]];
   const when = s => s ? new Date(s).toLocaleString("pt-BR") : "—";
   const item = (tag, props, ...children) => h(tag, props, ...children);
@@ -292,7 +293,7 @@
           h("h2",null,"Sobre o plugin"),
           h("p",null,"Campanhas, leads, custos e programação de buscas Treg no Hermes."),
           h("p",null,"Desenvolvedor: ",h("strong",null,ABOUT.developer)),
-          h("p",null,"Versão 0.1.0.dev2")),
+          h("p",null,"Versão 0.1.0.dev3")),
         h("article",{className:"hp-card"},
           h("h2",null,"Contato e suporte"),
           h("dl",{className:"hp-contact-list"},

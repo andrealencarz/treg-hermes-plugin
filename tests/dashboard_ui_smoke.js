@@ -91,7 +91,11 @@ console.log("about: links de contato conferidos");
 const campaign = {id:"campaign-1",name:"Clínica Estética",niche:"estética",service:"Marketing",
   cities:[{city:"Teresina",uf:"PI"}],sources:["google_maps","instagram"],state:"draft",
   target_leads:30,run_cap_micro:1000000,monthly_cap_micro:2000000};
-assert.ok(flatten(render("campaigns",true,[campaign])).includes("Editar"));
+const campaignText = flatten(render("campaigns",true,[campaign]));
+assert.ok(campaignText.includes("Editar"));
+assert.ok(campaignText.includes("rodada US$ 1,00"));
+assert.ok(!campaignText.includes("US$ 1.0000"));
+assert.ok(flatten(render("campaigns",true,[{...campaign,run_cap_micro:1000000000}])).includes("US$ 1.000,00"));
 const editTree = render("campaigns",true,[campaign],campaign.id);
 assert.ok(flatten(editTree).includes("Salvar alterações"));
 function namedFields(node) {

@@ -1,5 +1,9 @@
 # Histórico
 
+## 0.1.0.dev3 — 09/10/2026
+
+- Valores em USD usam formatação brasileira: `US$ 1,00` para um dólar e `US$ 1.000,00` para mil dólares, com até seis casas para custos pequenos.
+
 ## 0.1.0.dev2 — 09/10/2026
 
 - Botão **Editar** e formulário completo nas campanhas do Dashboard Hermes.

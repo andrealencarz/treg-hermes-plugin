@@ -1,5 +1,5 @@
 name: hermes-prospector
-version: 0.1.0.dev2
+version: 0.1.0.dev3
 description: Prospecção de empresas via Treg no Dashboard do Hermes
 manifest_version: 2
 api_version: 1
