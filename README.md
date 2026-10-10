@@ -12,13 +12,15 @@ A URL instala o código, mas ainda é preciso ativar o plugin, reiniciar o servi
 
 1. No Dashboard do Hermes, abra **Plugins** e localize **Install from GitHub / Git URL**. Use esse formulário; a busca em **Plugin Catalog** não encontra este plugin personalizado.
 2. Cole `https://github.com/andrealencarz/treg-hermes-plugin` em **Git URL or owner/repo**.
-3. Marque **Enable after install** (**Ativar após instalar**) e clique **Install**. O Hermes pode avisar que a origem personalizada não foi revisada pelo catálogo.
-4. Confirme que o Prospector aparece entre os plugins instalados e está habilitado.
+3. Marque **Enable after install** (**Ativar após instalar**) e clique **Install**. O aviso vermelho **“Custom (unreviewed) source — not from the Hermes catalog.”** identifica a origem personalizada; sozinho, ele não indica erro. O campo da URL pode ficar vazio após o envio.
+4. Confirme em **Installed Plugins** que `hermes-prospector` aparece com a versão esperada e o estado **enabled**. Esse é o sinal de que a instalação terminou; o menu lateral **Prospector** também deve aparecer.
 5. No painel da hospedagem, **reinicie o serviço/projeto do Hermes que executa o Dashboard**. Na Hostinger, use **hPanel → VPS → Gerenciador Docker → projeto do Hermes → Ações → Reiniciar**. No Hermes 0.21.5, a API do plugin é carregada quando esse serviço inicia; o botão **Restart Gateway** da tela **System** não substitui esse reinício.
 6. Recarregue o Dashboard com `⌘⇧R` (macOS) ou `Ctrl+Shift+R` (Windows/Linux) e abra **Prospector → Configurações**. Cadastre a chave Treg em uma sessão HTTPS. Se ela for um token de identidade, informe também o slug da organização. A chave é validada antes de ser salva.
 7. Ajuste o teto mensal global e, ao criar uma campanha, o teto por rodada **antes** de clicar **Buscar agora**. A instalação e a validação da chave não iniciam buscas pagas.
 
 O GitHub fornece apenas o código. Dados, banco e segredo ficam em `<HERMES_HOME>/plugin-data/hermes-prospector` no servidor; não coloque a chave na URL nem no repositório.
+
+Para demonstrar a instalação em um Hermes que já possui o Prospector, marque **Force reinstall** antes de clicar **Install**. Essa opção substitui a pasta do plugin instalado; os dados do Prospector ficam no diretório `plugin-data` citado acima. Para mostrar uma primeira instalação, use uma instância de teste sem o plugin.
 
 ### Atualizar uma instalação existente
 
